@@ -61,3 +61,5 @@ StyleCop.Cache
 
 # custom data Files
 *.json
+/Telegram.Automation.Web/LadaDb
+/Telegram.Automation.Web/LilyDB
