@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.Xml.XPath;
 
 namespace Telegram.Automation;
-internal class MessageProcessor
+public class MessageProcessor
 {
     public static List<BotAccount> ProcessStatusMessage(string input)
     {

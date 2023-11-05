@@ -5,14 +5,18 @@ namespace Telegram.Automation.Web.Pages;
 public class IndexModel : PageModel
 {
     private readonly ILogger<IndexModel> _logger;
+    private readonly AccountsManager accountsManager;
 
-    public IndexModel(ILogger<IndexModel> logger)
+    public List<BotAccount> Accounts { get; set; } = new List<BotAccount>();
+
+    public IndexModel(ILogger<IndexModel> logger, AccountsManager accountsManager)
     {
         _logger = logger;
+        this.accountsManager = accountsManager;
     }
 
-    public void OnGet()
+    public async Task OnGet()
     {
-
+        Accounts = await accountsManager.GetBotAccountsAsync();
     }
 }

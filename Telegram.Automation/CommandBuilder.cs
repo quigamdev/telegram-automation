@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Telegram.Automation;
-internal class CommandBuilder
+public class CommandBuilder
 {
     private const string AccountCommand = "/";
 

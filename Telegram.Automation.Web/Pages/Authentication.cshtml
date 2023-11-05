@@ -1,0 +1,19 @@
+﻿@page
+@model Telegram.Automation.Web.Pages.AuthenticationModel
+@{
+    ViewData["Title"] = "Authentication";
+}
+
+<form method="post" >
+    <p>
+    @Model.InvalidCode
+    </p>
+    <div class="form-group">
+        <input type="text" asp-for="SecurityCode" class="form-control form-control-user"
+               aria-describedby="security code"
+               placeholder="Enter security code...">
+    </div>
+    <a href="#" class="btn btn-primary" onclick="this.closest('form').submit();return false;">
+        <span class="text">Activate</span>
+    </a>
+</form>
