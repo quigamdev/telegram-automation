@@ -37,8 +37,11 @@ internal class Program
         builder.Services.AddOptions<TelegramConnectorOptions>().Bind(builder.Configuration.GetSection("TelegramConnector"));
         builder.Services.AddHostedService<ScheduleHostedService>();
         builder.Services.AddSingleton<IScheduleExecutor, ScheduleExecutor>();
-        builder.Services.AddSingleton<TelegramConnector>();
         builder.Services.AddSingleton<AccountsManager>();
         builder.Services.AddLogging(a => a.AddConsole());
+        builder.Services.AddLazyCache();
+
+        builder.Services.AddSingleton<ITelegramConnector, TelegramConnector>();
+
     }
 }

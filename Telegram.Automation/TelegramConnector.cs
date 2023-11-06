@@ -11,15 +11,15 @@ using static TdLib.TdApi.Update;
 
 namespace Telegram.Automation;
 
-public class TelegramConnector : IDisposable
+public class TelegramConnector : IDisposable, ITelegramConnector
 {
     private static SemaphoreSlim locker = new SemaphoreSlim(1, 1);
     private readonly TelegramConnectorOptions settings;
-    private readonly ILogger<TelegramConnector> logger;
+    private readonly ILogger<ITelegramConnector> logger;
     private TdClient client;
     private Queue<UpdateChatLastMessage> Messages { get; set; } = new Queue<UpdateChatLastMessage>();
 
-    public TelegramConnector(IOptions<TelegramConnectorOptions> settings, ILogger<TelegramConnector> logger)
+    public TelegramConnector(IOptions<TelegramConnectorOptions> settings, ILogger<ITelegramConnector> logger)
     {
         this.settings = settings.Value;
         this.logger = logger;
@@ -38,7 +38,15 @@ public class TelegramConnector : IDisposable
         await locker.WaitAsync();
         if (client != null) return await Authenticate(CancellationToken.None);
 
+
         client = new TdClient();
+
+        await TdApi.SetLogTagVerbosityLevelAsync(client, "actor", 0);
+        await TdApi.SetLogTagVerbosityLevelAsync(client, "binlog", 0);
+        await TdApi.SetLogTagVerbosityLevelAsync(client, "connections", 0);
+        await TdApi.SetLogTagVerbosityLevelAsync(client, "notifications", 0);
+        await TdApi.SetLogTagVerbosityLevelAsync(client, "proxy", 0);
+
         client.UpdateReceived += Client_UpdateReceived;
 
         await client.SetTdlibParametersAsync(

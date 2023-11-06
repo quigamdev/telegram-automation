@@ -7,15 +7,15 @@ namespace Telegram.Automation.Web.Pages;
 
 public class AuthenticationModel : PageModel
 {
-    private readonly TelegramConnector telegramConnector;
+    private readonly ITelegramConnector telegramConnector;
 
-    public AuthenticationModel(TelegramConnector telegramConnector)
+    public AuthenticationModel(ITelegramConnector telegramConnector)
     {
         this.telegramConnector = telegramConnector;
     }
-    [BindRequired]
+    [BindProperty]
     public string SecurityCode { get; set; }
-    public string InvalidCode { get; set; }
+    public string Message { get; set; }
 
     public void OnGet()
     {
@@ -24,17 +24,16 @@ public class AuthenticationModel : PageModel
     public async Task OnPost()
     {
         SecurityCode = Request.Form["SecurityCode"];
-
         await telegramConnector.Start();
         try
         {
             await telegramConnector.CheckAuthCode(SecurityCode);
-            InvalidCode = $"Code valid!";
+            Message = $"Code valid and system authenticated!";
 
         }
         catch
         {
-            InvalidCode = $"The code is invalid! ({SecurityCode})";
+            Message = $"The code is invalid! ({SecurityCode})";
         }
     }
 }

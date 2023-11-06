@@ -1,26 +1,35 @@
-﻿using System.Data.Common;
+﻿using LazyCache;
+using System.Data.Common;
 using Telegram.Automation;
 
 public class AccountsManager
 {
-    public AccountsManager(TelegramConnector telegramConnector)
+    private IAppCache cache = new CachingService();
+
+    public AccountsManager(ITelegramConnector telegramConnector)
     {
         connector = telegramConnector;
     }
 
-    private TelegramConnector connector { get; }
+    private ITelegramConnector connector { get; }
 
     public async Task<List<BotAccount>> GetBotAccountsAsync()
     {
-        return new List<BotAccount>();
+        return await cache.GetOrAddAsync("Accounts", async (e) =>
+        {
+            e.AbsoluteExpiration = DateTimeOffset.UtcNow.AddMinutes(2);
+            return await RefreshBotsAccounts();
+        });
+    }
 
+    private async Task<List<BotAccount>> RefreshBotsAccounts()
+    {
         var command = CommandBuilder.GetAccountsStatus();
 
         await InitConnector();
         var message = await connector.SendMessage(command);
-        
-        return MessageProcessor.ProcessStatusMessage(message);
 
+        return MessageProcessor.ProcessStatusMessage(message);
     }
 
     private async Task InitConnector()
@@ -30,5 +39,19 @@ public class AccountsManager
         {
             throw new Exception("Authentication Failed!");
         }
+    }
+
+    public async Task<string> StartAccount(string account)
+    {
+        await InitConnector();
+        var command = CommandBuilder.StartAccount(account);
+        return await connector.SendMessage(command);
+    }
+    public async Task<string> StopAccount(string account)
+    {
+        await InitConnector();
+        var command = CommandBuilder.StopAccount(account);
+        return await connector.SendMessage(command);
+
     }
 }

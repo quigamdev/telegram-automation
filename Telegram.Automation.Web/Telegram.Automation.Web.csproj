@@ -7,6 +7,9 @@
     <UserSecretsId>e8f77114-6c11-4705-bca2-40586e646762</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="LazyCache.AspNetCore" Version="2.4.0" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Telegram.Automation\Telegram.Automation.csproj" />
   </ItemGroup>
   <ItemGroup>

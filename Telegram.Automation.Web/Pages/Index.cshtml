@@ -9,37 +9,53 @@
     <div class="card-header py-3">
         <h6 class="m-0 font-weight-bold text-primary">Active accounts</h6>
     </div>
+    <p>
+   Message:  @Model.Message
+    </p>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Is Online</th>
-                        <th>Is scheduled</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    
-                     @foreach (var account in Model.Accounts)
-                    {
+            <form method="post" enctype="multipart/form-data">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
                         <tr>
-                            <td>@account.Name </td>
-                            <td>@account.IsOnline</td>
-                            <td>@account.NextSchedule</td>
-                            <td>
-                                <a href="#" class="btn btn-danger btn-icon-split" onclick="this.closest('form').submit();return false;">
-                                    <span class="icon text-white-50">
-                                        <i class="fas fa-stop"></i>
-                                    </span>
-                                    <span class="text">Activate</span>
-                                </a>
-                            </td>
+                            <th>Name</th>
+                            <th>Is Online</th>
+                            <th>Is scheduled</th>
+                            <th>Action</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var account in Model.Accounts)
+                        {
+                            <tr>
+                                <td>@account.Name </td>
+                                <td>@account.IsOnline</td>
+                                <td>@account.NextSchedule</td>
+                                <td>
+                        @*<a href="#" class="btn btn-success btn-icon-split" onclick="this.closest('form').submit();return false;">
+                                        <span class="icon text-white-50">
+                                            <i class="fas fa-stop"></i>
+                                        </span>
+                                        <span class="text">Activate</span>
+                                    </a> *@
+                                    <a class="btn btn-success btn-icon-split">
+                                        @* <span class="icon text-white-50">
+                                            <i class="fas fa-start"></i>
+                                        </span> *@
+                                        <input type="submit" class="text" asp-page-handler="StartAccount" asp-route-account="@account.AccountNumber" value="Start">
+                                    </a>
+                                    <a class="btn btn-danger btn-icon-split">
+                                     @*    <span class="icon text-white-50">
+                                            <i class="fas fa-stop"></i>
+                                        </span> *@
+                                        <input type="submit" value="Stop" asp-page-handler="StopAccount" asp-route-account="@account.AccountNumber" class="text">
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </form>
         </div>
     </div>
 </div>
