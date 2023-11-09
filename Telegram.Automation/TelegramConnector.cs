@@ -17,7 +17,8 @@ public class TelegramConnector : IDisposable, ITelegramConnector
     private readonly TelegramConnectorOptions settings;
     private readonly ILogger<ITelegramConnector> logger;
     private TdClient client;
-    private Queue<UpdateChatLastMessage> Messages { get; set; } = new Queue<UpdateChatLastMessage>();
+    private Queue<UpdateChatLastMessage> Messages { get; set; } = new();
+    private List<MessageLog> messagesLog = new();
 
     public TelegramConnector(IOptions<TelegramConnectorOptions> settings, ILogger<ITelegramConnector> logger)
     {
@@ -154,4 +155,6 @@ public class TelegramConnector : IDisposable, ITelegramConnector
         }
         return null;
     }
+
+    public IEnumerable<MessageLog> GetLog() => messagesLog;
 }

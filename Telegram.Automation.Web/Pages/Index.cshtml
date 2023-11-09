@@ -4,58 +4,68 @@
     ViewData["Title"] = "Home page";
 }
 
+<style>
+    table{
+        width:100%;
+    }
+    .accounts_actions {
+        width:10rem;
+    }
+</style>
 <!-- DataTales Example -->
 <div class="card shadow mb-4">
     <div class="card-header py-3">
         <h6 class="m-0 font-weight-bold text-primary">Active accounts</h6>
     </div>
     <p>
-   Message:  @Model.Message
+        Message:  @Model.Message
     </p>
     <div class="card-body">
         <div class="table-responsive">
-            <form method="post" enctype="multipart/form-data">
-                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-                    <thead>
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Is Online</th>
+                        <th>Is scheduled</th>
+                        <th class="accounts_actions">
+                            Action
+                         @*    <a href="#" class="btn btn-success btn-icon-split">
+                                <span class="icon text-white-50">
+                                    <i class="fas fa-play"></i>
+                                </span>
+                            </a>
+                            <a href="#" class="btn btn-danger btn-icon-split">
+                                <span class="icon text-white-50">
+                                    <i class="fas fa-stop"></i>
+                                </span>
+                            </a> *@
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var account in Model.Accounts)
+                    {
                         <tr>
-                            <th>Name</th>
-                            <th>Is Online</th>
-                            <th>Is scheduled</th>
-                            <th>Action</th>
+                            <td>@account.Name </td>
+                            <td>@account.IsOnline</td>
+                            <td>@account.NextSchedule</td>
+                            <td class="accounts_actions">
+                                <a href="#" class="btn btn-success btn-icon-split">
+                                    <span class="icon text-white-50">
+                                        <i class="fas fa-play"></i>
+                                    </span>
+                                </a>
+                                <a href="#" class="btn btn-danger btn-icon-split">
+                                    <span class="icon text-white-50">
+                                        <i class="fas fa-stop"></i>
+                                    </span>
+                                </a>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var account in Model.Accounts)
-                        {
-                            <tr>
-                                <td>@account.Name </td>
-                                <td>@account.IsOnline</td>
-                                <td>@account.NextSchedule</td>
-                                <td>
-                        @*<a href="#" class="btn btn-success btn-icon-split" onclick="this.closest('form').submit();return false;">
-                                        <span class="icon text-white-50">
-                                            <i class="fas fa-stop"></i>
-                                        </span>
-                                        <span class="text">Activate</span>
-                                    </a> *@
-                                    <a class="btn btn-success btn-icon-split">
-                                        @* <span class="icon text-white-50">
-                                            <i class="fas fa-start"></i>
-                                        </span> *@
-                                        <input type="submit" class="text" asp-page-handler="StartAccount" asp-route-account="@account.AccountNumber" value="Start">
-                                    </a>
-                                    <a class="btn btn-danger btn-icon-split">
-                                     @*    <span class="icon text-white-50">
-                                            <i class="fas fa-stop"></i>
-                                        </span> *@
-                                        <input type="submit" value="Stop" asp-page-handler="StopAccount" asp-route-account="@account.AccountNumber" class="text">
-                                    </a>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </form>
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

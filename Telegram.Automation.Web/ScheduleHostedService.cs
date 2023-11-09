@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic;
 using System.Threading;
 using Telegram.Automation;
 
@@ -39,7 +40,7 @@ internal class ScheduleHostedService : IHostedService
         }
         catch (Exception ex)
         {
-            logger.LogCritical(ex, "ScheduledHostedService failed to execute schedule");
+            logger.LogCritical(ex, $"ScheduledHostedService failed to execute schedule ({DateTime.Now})");
         }
 
     }
@@ -60,4 +61,5 @@ internal class ScheduleHostedService : IHostedService
         timer.Dispose();
         return Task.CompletedTask;
     }
+
 }

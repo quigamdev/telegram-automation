@@ -29,7 +29,8 @@ public class AccountsManager
         await InitConnector();
         var message = await connector.SendMessage(command);
 
-        return MessageProcessor.ProcessStatusMessage(message);
+        return MessageProcessor.ProcessStatusMessage(message)
+            .OrderBy(s=> s.Name).ToList();
     }
 
     private async Task InitConnector()

@@ -6,4 +6,5 @@ public interface ITelegramConnector : IDisposable
     Task InitAuthentication();
     Task<string> SendMessage(string message, CancellationToken? token = null);
     Task<AuthenticationResult> Start();
+    IEnumerable<MessageLog> GetLog();
 }

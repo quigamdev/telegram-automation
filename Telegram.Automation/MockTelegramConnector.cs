@@ -11,6 +11,11 @@ public class MockTelegramConnector : ITelegramConnector
     {
     }
 
+    public IEnumerable<MessageLog> GetLog()
+    {
+        return new List<MessageLog>();
+    }
+
     public Task InitAuthentication()
     {
         return Task.CompletedTask;

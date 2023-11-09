@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http.HttpResults;
+using System.Reflection.Metadata.Ecma335;
 using Telegram.Automation;
 
 internal class Program
@@ -20,14 +22,22 @@ internal class Program
 
         app.UseHttpsRedirection();
         app.UseStaticFiles();
-
         app.UseRouting();
+
+        RegisterApi(app);
 
         app.UseAuthorization();
 
         app.MapRazorPages();
 
         app.Run();
+    }
+
+    private static void RegisterApi(WebApplication app)
+    {
+        app.MapGet("/schedule/get", async (context) =>
+            await context.Response.WriteAsJsonAsync(
+                await context.RequestServices.GetRequiredService<IScheduleExecutor>().GetPlan()));
     }
 
     private static void RegisterServices(WebApplicationBuilder builder)
@@ -41,7 +51,7 @@ internal class Program
         builder.Services.AddLogging(a => a.AddConsole());
         builder.Services.AddLazyCache();
 
-        builder.Services.AddSingleton<ITelegramConnector, TelegramConnector>();
+        builder.Services.AddSingleton<ITelegramConnector, MockTelegramConnector>();
 
     }
 }
