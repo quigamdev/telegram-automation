@@ -7,24 +7,20 @@ internal class Program
     private static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+        builder.Configuration.AddEnvironmentVariables();
+        var mode = builder.Configuration["mode"];
 
-        RegisterServices(builder);
+        RegisterServices(builder.Services, mode, builder.Configuration);
 
         var app = builder.Build();
 
-        // Configure the HTTP request pipeline.
-        if (!app.Environment.IsDevelopment())
-        {
-            app.UseExceptionHandler("/Error");
-            // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-            app.UseHsts();
-        }
+        ApplyDevelopmentSettings(app);
 
         app.UseHttpsRedirection();
         app.UseStaticFiles();
         app.UseRouting();
 
-        RegisterApi(app);
+        RegisterMinimalApi(app);
 
         app.UseAuthorization();
 
@@ -33,25 +29,40 @@ internal class Program
         app.Run();
     }
 
-    private static void RegisterApi(WebApplication app)
+    private static void ApplyDevelopmentSettings(WebApplication app)
+    {
+        if (app.Environment.IsDevelopment()) return;
+
+        // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+        //app.UseHsts(); -- handled by proxy server
+        app.UseExceptionHandler("/Error");
+    }
+
+    private static void RegisterMinimalApi(WebApplication app)
     {
         app.MapGet("/schedule/get", async (context) =>
             await context.Response.WriteAsJsonAsync(
                 await context.RequestServices.GetRequiredService<IScheduleExecutor>().GetPlan()));
     }
 
-    private static void RegisterServices(WebApplicationBuilder builder)
+    private static void RegisterServices(IServiceCollection services, string? mode, IConfiguration config)
     {
         // Add services to the container.
-        builder.Services.AddRazorPages();
-        builder.Services.AddOptions<TelegramConnectorOptions>().Bind(builder.Configuration.GetSection("TelegramConnector"));
-        builder.Services.AddHostedService<ScheduleHostedService>();
-        builder.Services.AddSingleton<IScheduleExecutor, ScheduleExecutor>();
-        builder.Services.AddSingleton<AccountsManager>();
-        builder.Services.AddLogging(a => a.AddConsole());
-        builder.Services.AddLazyCache();
+        services.AddRazorPages();
+        services.AddOptions<TelegramConnectorOptions>().Bind(config.GetSection("TelegramConnector"));
+        services.AddHostedService<ScheduleHostedService>();
+        services.AddSingleton<IScheduleExecutor, ScheduleExecutor>();
+        services.AddSingleton<AccountsManager>();
+        services.AddLogging(a => a.AddConsole());
+        services.AddLazyCache();
 
-        builder.Services.AddSingleton<ITelegramConnector, MockTelegramConnector>();
-
+        if (mode == ServiceModes.Prod)
+        {
+            services.AddSingleton<ITelegramConnector, TelegramConnector>();
+        }
+        else
+        {
+            services.AddSingleton<ITelegramConnector, MockTelegramConnector>();
+        }
     }
 }

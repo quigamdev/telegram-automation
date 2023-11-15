@@ -1,35 +1,10 @@
 ﻿@page
 @model Telegram.Automation.Web.Pages.ScheduleModel
-@{
-}
+
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js" ></script>
+<script src="~/Scripts/app.js" type="text/javascript"></script>
+<script type="text/javascript">initPage("Schedule")</script>
 
 
-<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
-<script type="text/javascript">
-    google.charts.load("current", { packages: ["timeline"] });
-    google.charts.setOnLoadCallback(drawChart);
-    async function drawChart() {
-        // var data = [{ account: "asd", description: "asd", start: { h: 0, m: 0 }, end: { h: 2, m: 0 } }]
-        var response = await fetch("/schedule/get");
-        var data = await response.json();
-        var container = document.getElementById('example5.1');
-        var chart = new google.visualization.Timeline(container);
-        var dataTable = new google.visualization.DataTable();
-
-        dataTable.addColumn({ type: 'string', id: 'account' });
-        dataTable.addColumn({ type: 'string', id: 'description' });
-        dataTable.addColumn({ type: 'date', id: 'start' });
-        dataTable.addColumn({ type: 'date', id: 'end' });
-        var rows = [];
-        for (let row of data) rows.push([row.name, row.description, new Date(0, 0, 0, row.start.hour, row.start.minute, 0), new Date(0, 0, 0, row.end.hour, row.end.minute, 0)]);
-
-        dataTable.addRows(rows);
-        var options = {
-            timeline: { colorByRowLabel: false }
-        };
-        chart.draw(dataTable, options);
-    }
-</script>
-
-<div id="example5.1" style="height:100vh;"></div>
+<div id="Schedule" style="height:100vh;"></div>

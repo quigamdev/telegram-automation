@@ -66,3 +66,4 @@ StyleCop.Cache
 **.txt
 
 **/node_modules/**
+/Telegram.Automation.Web/wwwroot/scripts/**

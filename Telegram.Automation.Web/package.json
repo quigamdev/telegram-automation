@@ -1,0 +1,13 @@
+{
+  "devDependencies": {
+    "eslint": "^8.53.0",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@types/google.visualization": "^0.0.72"
+  },
+  "scripts": {
+    "build": "tsc --outDir wwwroot/scripts",
+    "watch": "tsc -w --outDir wwwroot/scripts"
+  }
+}
