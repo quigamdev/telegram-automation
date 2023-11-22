@@ -2,9 +2,12 @@
 @model Telegram.Automation.Web.Pages.ScheduleModel
 
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js" ></script>
-<script src="~/Scripts/app.js" type="text/javascript"></script>
 <script type="text/javascript">initPage("Schedule")</script>
 
-
-
+<div>
+    <input type="text" name="bot-name" id="bot-name" />
+    <input type="text" name="bot-start" id="bot-start" />
+    <input type="text" name="bot-end" id="bot-end" />
+    <button onclick="schedulePage.add()"> Add</button>
+</div>
 <div id="Schedule" style="height:100vh;"></div>

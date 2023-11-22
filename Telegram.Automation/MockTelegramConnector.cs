@@ -26,6 +26,10 @@ public class MockTelegramConnector : ITelegramConnector
         await Task.CompletedTask;
         if (message == CommandBuilder.GetAccountsStatus()) return File.ReadAllText("bin/debug/net7.0/Mocks/StatusCommandResponse.txt");
 
+        if (message.StartsWith(CommandBuilder.StartAccount(""))) return "Starting account...";
+
+        if (message.StartsWith(CommandBuilder.StopAccount(""))) return "Stopping account...";
+
         return "";
     }
 

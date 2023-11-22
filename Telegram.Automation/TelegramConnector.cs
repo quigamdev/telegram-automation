@@ -39,14 +39,9 @@ public class TelegramConnector : IDisposable, ITelegramConnector
         await locker.WaitAsync();
         if (client != null) return await Authenticate(CancellationToken.None);
 
-
         client = new TdClient();
 
-        await TdApi.SetLogTagVerbosityLevelAsync(client, "actor", 0);
-        await TdApi.SetLogTagVerbosityLevelAsync(client, "binlog", 0);
-        await TdApi.SetLogTagVerbosityLevelAsync(client, "connections", 0);
-        await TdApi.SetLogTagVerbosityLevelAsync(client, "notifications", 0);
-        await TdApi.SetLogTagVerbosityLevelAsync(client, "proxy", 0);
+        await SetLoggingLevel();
 
         client.UpdateReceived += Client_UpdateReceived;
 
@@ -61,6 +56,15 @@ public class TelegramConnector : IDisposable, ITelegramConnector
             applicationVersion: "0.1.0.0");
 
         return await Authenticate(CancellationToken.None);
+    }
+
+    private async Task SetLoggingLevel()
+    {
+        await TdApi.SetLogTagVerbosityLevelAsync(client, "actor", 0);
+        await TdApi.SetLogTagVerbosityLevelAsync(client, "binlog", 0);
+        await TdApi.SetLogTagVerbosityLevelAsync(client, "connections", 0);
+        await TdApi.SetLogTagVerbosityLevelAsync(client, "notifications", 0);
+        await TdApi.SetLogTagVerbosityLevelAsync(client, "proxy", 0);
     }
 
     private async Task<Chat> GetChat(TdClient client, long automationChatId, string automationChatName)
@@ -148,7 +152,9 @@ public class TelegramConnector : IDisposable, ITelegramConnector
             while (Messages.TryDequeue(out var update))
             {
                 if (update.ChatId != chatId) continue;
+
                 if ((update.LastMessage.SenderId as MessageSenderUser)?.UserId == senderId) continue;
+              
                 return ((TdLib.TdApi.MessageContent.MessageText)update.LastMessage.Content).Text.Text;
             }
             await Task.Delay(128);

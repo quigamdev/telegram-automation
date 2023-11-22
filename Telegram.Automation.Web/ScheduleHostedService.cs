@@ -13,11 +13,11 @@ internal class ScheduleHostedService : IHostedService
         this.executor = executor;
         this.logger = logger;
     }
-    private PeriodicTimer timer;
+    private PeriodicTimer? timer;
     private CancellationToken cancellationToken;
-    private CancellationTokenSource cancellationTokenSource;
+    private CancellationTokenSource cancellationTokenSource = new();
 
-    private Task processingTask;
+    private Task? processingTask;
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -47,7 +47,7 @@ internal class ScheduleHostedService : IHostedService
 
     private async Task Execute()
     {
-        while (await timer.WaitForNextTickAsync(cancellationToken) && !cancellationToken.IsCancellationRequested)
+        while (await timer!.WaitForNextTickAsync(cancellationToken) && !cancellationToken.IsCancellationRequested)
         {
             await executor.Execute(cancellationToken);
         }
@@ -55,10 +55,13 @@ internal class ScheduleHostedService : IHostedService
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        cancellationTokenSource.Cancel();
         cancellationTokenSource.Dispose();
-        processingTask.Dispose();
-        timer.Dispose();
+        processingTask?.Dispose();
+        timer?.Dispose();
+
+        processingTask = null;
+        timer = null;
+
         return Task.CompletedTask;
     }
 
