@@ -4,6 +4,7 @@ using Telegram.Automation;
 
 public class AccountsManager
 {
+    private const string CachKey = "Accounts";
     private IAppCache cache = new CachingService();
 
     public AccountsManager(ITelegramConnector telegramConnector)
@@ -15,7 +16,7 @@ public class AccountsManager
 
     public async Task<List<BotAccount>> GetBotAccountsAsync()
     {
-        return await cache.GetOrAddAsync("Accounts", async (e) =>
+        return await cache.GetOrAddAsync(CachKey, async (e) =>
         {
             e.AbsoluteExpiration = DateTimeOffset.UtcNow.AddMinutes(2);
             return await RefreshBotsAccounts();
@@ -27,10 +28,10 @@ public class AccountsManager
         var command = CommandBuilder.GetAccountsStatus();
 
         await InitConnector();
-        var message = await connector.SendMessage(command);
+        var message = await connector.SendMessage(command, MessageProcessor.IsStatusMessage);
 
         return MessageProcessor.ProcessStatusMessage(message)
-            .OrderBy(s=> s.Name).ToList();
+            .OrderBy(s => s.Name).ToList();
     }
 
     private async Task InitConnector()
@@ -46,13 +47,18 @@ public class AccountsManager
     {
         await InitConnector();
         var command = CommandBuilder.StartAccount(account);
-        return await connector.SendMessage(command);
+
+        var response = await connector.SendMessage(command, MessageProcessor.IsStartingAccountMessage);
+        cache.Remove(CachKey);
+        return response;
     }
     public async Task<string> StopAccount(string account)
     {
         await InitConnector();
         var command = CommandBuilder.StopAccount(account);
-        return await connector.SendMessage(command);
 
+        var response = await connector.SendMessage(command, MessageProcessor.IsStopingAccountMessage);
+        cache.Remove(CachKey);
+        return response;
     }
 }

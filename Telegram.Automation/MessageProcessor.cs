@@ -1,6 +1,11 @@
 ﻿namespace Telegram.Automation;
 public class MessageProcessor
 {
+    public static bool IsStatusMessage(string input) => input.Contains("Active:") &&
+            input.Contains("/ Online:") &&
+            input.Contains("-- Online --") &&
+            input.Contains("-- Offline --");
+
     public static List<BotAccount> ProcessStatusMessage(string input)
     {
         if (!input.Contains("Active:")) return new List<BotAccount>();
@@ -25,6 +30,11 @@ public class MessageProcessor
         }
         return result;
     }
+
+    internal static bool IsStartingAccountMessage(string input) => input.Contains("Starting");
+
+
+    internal static bool IsStopingAccountMessage(string input) => input.Contains("Stopping");
 
     private static bool DetermineStatus(bool isOnline, string? line)
     {

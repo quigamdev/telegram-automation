@@ -1,7 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic;
-using System.Threading;
-using Telegram.Automation;
+﻿using Telegram.Automation;
 
 internal class ScheduleHostedService : IHostedService
 {
@@ -19,13 +16,13 @@ internal class ScheduleHostedService : IHostedService
 
     private Task? processingTask;
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
         cancellationTokenSource = new CancellationTokenSource();
         processingTask = Task.Factory.StartNew(ExecuteSafe, TaskCreationOptions.LongRunning);
-
-        return Task.CompletedTask;
+     
+        await executor.Execute(cancellationToken);
     }
 
     private async Task ExecuteSafe()

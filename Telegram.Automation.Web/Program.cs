@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Http.HttpResults;
-using System.Diagnostics;
-using System.Reflection.Metadata.Ecma335;
 using Telegram.Automation;
 
 internal class Program
@@ -67,6 +64,10 @@ internal class Program
 
         app.MapPost("/schedule/add", async (HttpContext context, ScheduleItem data) =>
             await context.RequestServices.GetRequiredService<IScheduleExecutor>().AddToSchedule(data));
+
+        app.MapPost("/schedule/createSchedule", (HttpContext context) =>
+                         context.RequestServices.GetRequiredService<IScheduleExecutor>().CreateSchadule());
+
     }
 
     private static void RegisterServices(IServiceCollection services, string? mode, IConfiguration config)

@@ -15,10 +15,14 @@ public class AuthenticationModel : PageModel
     }
     [BindProperty]
     public string SecurityCode { get; set; }
+    [BindProperty]
+    public AuthenticationResult Status { get; set; }
     public string Message { get; set; }
 
-    public void OnGet()
+    public async Task OnGet()
     {
+        Status = await telegramConnector.IsAuthenticated();
+        Message = "Current status: " + Status;
     }
 
     public async Task OnPost()

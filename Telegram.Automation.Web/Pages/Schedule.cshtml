@@ -1,13 +1,20 @@
 ﻿@page
+@{
+    ViewData["Title"] = "Schedule";
+}
 @model Telegram.Automation.Web.Pages.ScheduleModel
 
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js" ></script>
 <script type="text/javascript">initPage("Schedule")</script>
 
-<div>
-    <input type="text" name="bot-name" id="bot-name" />
-    <input type="text" name="bot-start" id="bot-start" />
-    <input type="text" name="bot-end" id="bot-end" />
-    <button onclick="schedulePage.add()"> Add</button>
+<div class="input-group">
+    <input class="form-control bg-light" placeholder="name" type="text" name="bot-name" id="bot-name" />
+    <input class="form-control bg-light" placeholder="start (hh:mm)" type="text" name="bot-start" id="bot-start" />
+    <input class="form-control bg-light" placeholder="end (hh:mm)" type="text" name="bot-end" id="bot-end" />
+    <div class="input-group-append">
+        <button class="btn btn-primary" onclick="schedulePage.add()" type="button">
+            Add
+        </button>
+    </div>
 </div>
 <div id="Schedule" style="height:100vh;"></div>

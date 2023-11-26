@@ -8,6 +8,9 @@
     <p>
     @Model.Message
     </p>
+    
+    @if (Model.Status != AuthenticationResult.Authenticated)
+    {
     <div class="form-group">
         <input type="text" asp-for="SecurityCode" class="form-control form-control-user"
                aria-describedby="security code"
@@ -16,4 +19,6 @@
     <a href="#" class="btn btn-primary" onclick="this.closest('form').submit();return false;">
         <span class="text">Activate</span>
     </a>
+    }
+
 </form>

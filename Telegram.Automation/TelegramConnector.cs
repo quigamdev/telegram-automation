@@ -1,8 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Runtime.CompilerServices;
-using System.Threading;
 using TdLib;
 using static TdLib.TdApi;
 using static TdLib.TdApi.InputMessageContent;
@@ -48,9 +45,9 @@ public class TelegramConnector : IDisposable, ITelegramConnector
         await client.SetTdlibParametersAsync(
             useSecretChats: true,
             useFileDatabase: true,
-            databaseDirectory: (string)settings.DatabaseLocation,
-            apiId: (int)settings.ApiID,
-            apiHash: (string)settings.ApiHash,
+            databaseDirectory: settings.DatabaseLocation,
+            apiId: settings.ApiID,
+            apiHash: settings.ApiHash,
             systemLanguageCode: "en-US",
             deviceModel: "Desktop",
             applicationVersion: "0.1.0.0");
@@ -86,6 +83,16 @@ public class TelegramConnector : IDisposable, ITelegramConnector
                 return chat;
         }
         return null;
+    }
+
+    public async Task<AuthenticationResult> IsAuthenticated()
+    {
+        var status = await client.GetAuthorizationStateAsync();
+        if (status.DataType == "authorizationStateReady")
+        {
+            return AuthenticationResult.Authenticated;
+        }
+        return AuthenticationResult.Unauthorized;
     }
 
     private async Task<AuthenticationResult> Authenticate(CancellationToken token)
@@ -129,7 +136,7 @@ public class TelegramConnector : IDisposable, ITelegramConnector
         if (e is UpdateChatLastMessage lastMessageUpdate) Handle_UpdateChatLastMessage(lastMessageUpdate);
     }
 
-    public async Task<string> SendMessage(string message, CancellationToken? token = null)
+    public async Task<string> SendMessage(string message, Func<string, bool> messagePredicate, CancellationToken? token = null)
     {
         token ??= CancellationToken.None;
 
@@ -142,24 +149,37 @@ public class TelegramConnector : IDisposable, ITelegramConnector
 
         var senderId = ((MessageSenderUser)sentMessage.SenderId).UserId;
 
-        return await GetResponse(senderId, sentMessage.ChatId, (CancellationToken)token);
+        var tsc = CancellationTokenSource.CreateLinkedTokenSource(token ?? CancellationToken.None, new CancellationTokenSource(TimeSpan.FromSeconds(30)).Token);
+
+        return await GetResponse(senderId, sentMessage.ChatId, messagePredicate, tsc.Token);
     }
 
-    private async Task<string> GetResponse(long senderId, long chatId, CancellationToken token)
+    private async Task<string> GetResponse(long senderId, long chatId, Func<string, bool> messagePredicate, CancellationToken token)
     {
-        while (!token.IsCancellationRequested)
+        try
         {
-            while (Messages.TryDequeue(out var update))
+            while (!token.IsCancellationRequested)
             {
-                if (update.ChatId != chatId) continue;
+                while (Messages.TryDequeue(out var update) && !token.IsCancellationRequested)
+                {
+                    if (update.ChatId != chatId) continue;
+                    if ((update.LastMessage.SenderId as MessageSenderUser)?.UserId == senderId) continue;
 
-                if ((update.LastMessage.SenderId as MessageSenderUser)?.UserId == senderId) continue;
-              
-                return ((TdLib.TdApi.MessageContent.MessageText)update.LastMessage.Content).Text.Text;
+                    if (update?.LastMessage?.Content is TdApi.MessageContent.MessageText message && message?.Text?.Text is string)
+                    {
+                        if (messagePredicate(message.Text.Text))
+                            return message.Text.Text;
+                    }
+                }
+                await Task.Delay(128, token);
             }
-            await Task.Delay(128);
+            return null;
         }
-        return null;
+        catch (Exception)
+        {
+
+            return null;
+        }
     }
 
     public IEnumerable<MessageLog> GetLog() => messagesLog;

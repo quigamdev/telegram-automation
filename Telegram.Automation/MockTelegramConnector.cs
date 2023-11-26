@@ -21,7 +21,12 @@ public class MockTelegramConnector : ITelegramConnector
         return Task.CompletedTask;
     }
 
-    public async Task<string> SendMessage(string message, CancellationToken? token = null)
+    public Task<AuthenticationResult> IsAuthenticated()
+    {
+        return Task.FromResult(AuthenticationResult.Authenticated);
+    }
+
+    public async Task<string> SendMessage(string message, Func<string, bool> messagePredicate, CancellationToken? token = null)
     {
         await Task.CompletedTask;
         if (message == CommandBuilder.GetAccountsStatus()) return File.ReadAllText("bin/debug/net7.0/Mocks/StatusCommandResponse.txt");

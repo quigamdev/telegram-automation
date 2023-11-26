@@ -1,15 +1,16 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Accounts";
 }
 
 <style>
-    table{
-        width:100%;
+    table {
+        width: 100%;
     }
+
     .accounts_actions {
-        width:10rem;
+        width: 10rem;
     }
 </style>
 <!-- DataTales Example -->
@@ -18,11 +19,16 @@
         <h6 class="m-0 font-weight-bold text-primary">Active accounts</h6>
     </div>
     <p id="message">
-        Message:  @Model.Message
+        @Model.Message
     </p>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+    <div class="card-body ">
+        <div class="top-50">
+            <a href="#" class="btn btn-warning" onclick="accountsPage.handle_CaptureAccounts()">
+                Capture accounts list
+            </a>
+        </div>
+        <div class="table-responsive ">
+            <table class="table table-bordered " id="dataTable" width="100%" cellspacing="0">
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -37,11 +43,18 @@
                     @foreach (var account in Model.Accounts)
                     {
                         <tr>
-                            <td>@account.Name </td>
+
+                            <td class="@{
+                            if(account.Status == BotAccountStatus.Online)
+                                        Write("border-left-success");
+                                    else Write("border-left-danger");
+                                }">
+                                @account.Name
+                            </td>
                             <td>@account.Status</td>
                             <td>@account.NextSchedule</td>
                             <td class="accounts_actions" data-name="@account.Name">
-                                <a href="#" class="btn btn-success btn-icon-split" onclick="accountsPage.handle_Start(this)" >
+                                <a href="#" class="btn btn-success btn-icon-split" onclick="accountsPage.handle_Start(this)">
                                     <span class="icon text-white-50">
                                         <i class="fas fa-play"></i>
                                     </span>

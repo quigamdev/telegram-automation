@@ -5,7 +5,7 @@
     static async schedule_add(newItem: scheduleItem) {
         return await fetch("/schedule/add", {
             method: "POST",
-            body: JSON.stringify(newItem), 
+            body: JSON.stringify(newItem),
             headers: api.headers
         });
     }
@@ -22,57 +22,70 @@
             method: "POST",
         });
     }
+    static async schedule_createSchedule() {
+        return await fetch(`/schedule/createSchedule`, {
+            method: "POST",
+        });
+    }
 }
 
 class schedulePage {
     static data: any[];
     static chart: google.visualization.Timeline;
+    static dataTable: google.visualization.DataTable;
     static async loadTimeline() {
-        let drawChart = async () => {
-
-            // get API data
-            var response = await api.schedule_get();
-            schedulePage.data = await response.json();
-
-            var container = document.getElementById('Schedule') as Element;
-            container.addEventListener("dblclick", (e) => {
-                var selected = schedulePage.getCurrentSelectedItem();
-                alert(selected.name)
-            });
-
-            this.chart = new google.visualization.Timeline(container);
-            var dataTable = new google.visualization.DataTable();
-
-            dataTable.addColumn({ type: 'string', id: 'account' });
-            dataTable.addColumn({ type: 'string', id: 'description' });
-            dataTable.addColumn({ type: 'date', id: 'start' });
-            dataTable.addColumn({ type: 'date', id: 'end' });
-            var rows = [];
-
-            for (let row of schedulePage.data) {
-                let startDate = row.start ? new Date(0, 0, 0, row.start.hour, row.start.minute, 0) : "";
-                let endDate = row.end ? new Date(0, 0, 0, row.end.hour, row.end.minute, 0) : "";
-                rows.push([row.name, row.description, startDate, endDate]);
-            }
-
-            dataTable.addRows(rows);
-            var options = {
-                timeline: {
-                    colorByRowLabel: false,
-                },
-                tooltip: {
-                    isHtml: false
-                }
-            } as google.visualization.TimelineOptions;
-            this.chart.draw(dataTable, options);
-            google.visualization.events.addListener(this.chart, "select", (e: any) => {
-                var selected = schedulePage.getCurrentSelectedItem();
-                console.log("selected: " + selected.name);
-            })
-        }
-
         google.charts.load("current", { packages: ["timeline"] });
-        google.charts.setOnLoadCallback(drawChart);
+        google.charts.setOnLoadCallback(this.initChart.bind(this));
+    }
+    static async initChart() {
+
+        var container = document.getElementById('Schedule') as Element;
+        container.addEventListener("dblclick", (e) => {
+            var selected = schedulePage.getCurrentSelectedItem();
+            alert(selected.name)
+        });
+
+        this.chart = new google.visualization.Timeline(container);
+        this.dataTable = new google.visualization.DataTable();
+        let dataTable = this.dataTable;
+
+        dataTable.addColumn({ type: 'string', id: 'account' });
+        dataTable.addColumn({ type: 'string', id: 'description' });
+        dataTable.addColumn({ type: 'date', id: 'start' });
+        dataTable.addColumn({ type: 'date', id: 'end' });
+
+        google.visualization.events.addListener(this.chart, "select", (e: any) => {
+            var selected = schedulePage.getCurrentSelectedItem();
+            console.log("selected: " + selected.name);
+        })
+        await schedulePage.reloadData();
+    }
+
+    private static async reloadData() {
+        var response = await api.schedule_get();
+        schedulePage.data = await response.json();
+
+        var rows = [];
+
+        for (let row of schedulePage.data) {
+            let startDate = row.start ? new Date(0, 0, 0, row.start.hour, row.start.minute, 0) : "";
+            let endDate = row.end ? new Date(0, 0, 0, row.end.hour, row.end.minute, 0) : "";
+            rows.push([row.name, "", startDate, endDate]);
+        }
+        this.dataTable.removeRows(0, this.dataTable.getNumberOfRows())
+        this.dataTable.addRows(rows);
+
+        var options = {
+            timeline: {
+                colorByRowLabel: true, 
+                showBarLabels: false
+            },
+            tooltip: {
+                isHtml: true, 
+                trigger:"focus"
+            }
+        } as google.visualization.TimelineOptions;
+        this.chart.draw(this.dataTable, options);
     }
 
     private static getCurrentSelectedItem() {
@@ -98,10 +111,11 @@ class schedulePage {
             }
         } as scheduleItem;
         await api.schedule_add(newItem);
+        await this.reloadData();
 
     }
-    static initPage() {
-        this.loadTimeline();
+    static async initPage() {
+        await this.loadTimeline();
     }
 }
 
@@ -129,7 +143,9 @@ class accountsPage {
 
     static initPage() {
     }
-
+    static async handle_CaptureAccounts() {
+        await api.schedule_createSchedule();
+    }
 }
 class general {
     static showMessage(message: string): void {
