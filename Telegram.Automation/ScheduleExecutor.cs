@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Xml.Linq;
 
 namespace Telegram.Automation;
 
@@ -16,15 +17,15 @@ public class ScheduleExecutor : IScheduleExecutor
         this.store = store;
     }
 
-    public Task AddToSchedule(ScheduleItem data)
+    public Task AddToSchedule(int scheduleId, ScheduleItem data)
     {
-        var schedule = store.GetSchedule();
-        schedule.Add(data);
+        var schedule = store.Get(scheduleId);
+        schedule.Plan.Add(data);
         store.Save(schedule);
         return Task.CompletedTask;
     }
 
-    public void CreateSchadule()
+    public void CreateRegularSchadule(string name)
     {
         var scheduleItems = store.GetAccountsForScheduling();
 
@@ -32,17 +33,60 @@ public class ScheduleExecutor : IScheduleExecutor
 
         var count = scheduleItems.Count();
         var period = 24 * 60 / count;
+
         var scheduled = scheduleItems.Select((name, i) =>
-            new ScheduleItem(name, name, new ScheduleTime(i * period / 60, i * period % 60), new ScheduleTime((i + 1) * period / 60, (i + 1) * period % 60)))
+            new ScheduleItem(name, name,
+                new ScheduleTime(i * period / 60, i * period % 60),
+                new ScheduleTime((i + 1) * period / 60, (i + 1) * period % 60))
+            )
              .ToList();
 
-        store.Save(scheduled);
+        var schedule = new Schedule()
+        {
+            Name = name,
+            Plan = scheduled
+        };
+
+        store.Save(schedule);
+    }
+    public void CreateSchadule(string name)
+    {
+        var scheduleItems = store.GetAccountsForScheduling();
+
+        scheduleItems = scheduleItems.Concat(scheduleItems).ToList();
+
+        var count = scheduleItems.Count();
+        var period = 24 * 60 / count;
+
+        var scheduled = scheduleItems.Select((name, i) =>
+            new ScheduleItem(name, name,
+                new ScheduleTime(i * period / 60, i * period % 60),
+                new ScheduleTime((i + 1) * period * 2 / 60, (i + 1) * 2 * period % 60))
+            )
+             .ToList();
+
+        var schedule = new Schedule()
+        {
+            Name = name,
+            Plan = scheduled
+        };
+
+        store.Save(schedule);
     }
 
     public async Task Execute(CancellationToken cancellationToken)
     {
-        var schedule = store.GetSchedule();
-        var current = GetCurrent(schedule);
+        var schedules = store.GetActiveSchedules();
+        foreach (var schedule in schedules)
+        {
+            await ExecuteSchedule(schedule, cancellationToken);
+        }
+    }
+
+    private async Task ExecuteSchedule(Schedule schedule, CancellationToken cancellationToken)
+    {
+
+        var current = GetCurrent(schedule.Plan);
 
 
         if (current.SequenceEqual(ActiveItems)) return;
@@ -51,7 +95,7 @@ public class ScheduleExecutor : IScheduleExecutor
         {
             if (current.Count != 0)
             {
-                await StopUnattanded(schedule, current);
+                await StopUnattanded(schedule.Plan, current);
 
                 var accounts = await manager.GetBotAccountsAsync();
                 var currentNames = current.Select(s => s.name).ToList();
@@ -126,9 +170,15 @@ public class ScheduleExecutor : IScheduleExecutor
             s.end.hour * 60 + s.end.minute > now.Hour * 60 + now.Minute).ToList();
     }
 
-    public Task<List<ScheduleItem>> GetPlan()
+    public Task<List<ScheduleItem>> GetPlan(int id)
     {
-        var schedule = store.GetSchedule().OrderBy(s => s.name).ToList();
+        var schedule = store.Get(id).Plan.OrderBy(s => s.name).ToList();
         return Task.FromResult(schedule.ToList());
+    }
+
+    public List<ScheduleSimple> GetSchedules()
+    {
+        var all = store.Get();
+        return all.Select(s => new ScheduleSimple() { Id = s.Id, IsActive = s.IsActive, Name = s.Name }).ToList();
     }
 }

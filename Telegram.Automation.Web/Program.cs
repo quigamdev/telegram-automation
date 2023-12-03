@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Telegram.Automation;
 
 internal class Program
@@ -58,15 +59,19 @@ internal class Program
 
     private static void RegisterScheduleEndpoints(WebApplication app)
     {
-        app.MapGet("/schedule/get", async (context) =>
+        app.MapGet("/schedule/get/{id}", async (HttpContext context, [FromRoute] int id) =>
                     await context.Response.WriteAsJsonAsync(
-                        await context.RequestServices.GetRequiredService<IScheduleExecutor>().GetPlan()));
+                        await context.RequestServices.GetRequiredService<IScheduleExecutor>().GetPlan(id)));
 
-        app.MapPost("/schedule/add", async (HttpContext context, ScheduleItem data) =>
-            await context.RequestServices.GetRequiredService<IScheduleExecutor>().AddToSchedule(data));
+        app.MapGet("/schedule/getSchedules", async (HttpContext context) =>
+                            await context.Response.WriteAsJsonAsync(
+                                context.RequestServices.GetRequiredService<IScheduleExecutor>().GetSchedules()));
 
-        app.MapPost("/schedule/createSchedule", (HttpContext context) =>
-                         context.RequestServices.GetRequiredService<IScheduleExecutor>().CreateSchadule());
+        app.MapPost("/schedule/add", async (HttpContext context, ScheduleItem data, int id) =>
+            await context.RequestServices.GetRequiredService<IScheduleExecutor>().AddToSchedule(id, data));
+
+        app.MapPost("/schedule/createSchedule", (HttpContext context, string name) =>
+                         context.RequestServices.GetRequiredService<IScheduleExecutor>().CreateSchadule(name));
 
     }
 

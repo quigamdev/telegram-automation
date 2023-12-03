@@ -5,7 +5,10 @@
 @model Telegram.Automation.Web.Pages.ScheduleModel
 
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js" ></script>
-<script type="text/javascript">initPage("Schedule")</script>
+<script type="text/javascript">
+    var initData = @Model.InitData;
+</script>
+<script type="text/javascript">initPage("Schedule", initData)</script>
 
 <div class="input-group">
     <input class="form-control bg-light" placeholder="name" type="text" name="bot-name" id="bot-name" />

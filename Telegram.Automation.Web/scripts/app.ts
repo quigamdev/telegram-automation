@@ -9,8 +9,8 @@
             headers: api.headers
         });
     }
-    static async schedule_get() {
-        return await fetch("/schedule/get");
+    static async schedule_get(id: number) {
+        return await fetch(`/schedule/get/${id}`);
     }
     static async accounts_start(id: string) {
         return await fetch(`/account/start/${id}`, {
@@ -22,9 +22,10 @@
             method: "POST",
         });
     }
-    static async schedule_createSchedule() {
-        return await fetch(`/schedule/createSchedule`, {
+    static async schedule_createSchedule(data: { name: string }) {
+        return await fetch(`/schedule/createSchedule?name=${name}`, {
             method: "POST",
+            headers: this.headers, 
         });
     }
 }
@@ -33,9 +34,13 @@ class schedulePage {
     static data: any[];
     static chart: google.visualization.Timeline;
     static dataTable: google.visualization.DataTable;
-    static async loadTimeline() {
+    static async loadTimeline(params: SchedulePageParams) {
         google.charts.load("current", { packages: ["timeline"] });
-        google.charts.setOnLoadCallback(this.initChart.bind(this));
+        google.charts.setOnLoadCallback(async () => {
+            await this.initChart();
+            await schedulePage.reloadData(params.id);
+        });
+
     }
     static async initChart() {
 
@@ -58,11 +63,10 @@ class schedulePage {
             var selected = schedulePage.getCurrentSelectedItem();
             console.log("selected: " + selected.name);
         })
-        await schedulePage.reloadData();
     }
 
-    private static async reloadData() {
-        var response = await api.schedule_get();
+    private static async reloadData(scheduleId: number) {
+        var response = await api.schedule_get(scheduleId);
         schedulePage.data = await response.json();
 
         var rows = [];
@@ -77,12 +81,12 @@ class schedulePage {
 
         var options = {
             timeline: {
-                colorByRowLabel: true, 
+                colorByRowLabel: true,
                 showBarLabels: false
             },
             tooltip: {
-                isHtml: true, 
-                trigger:"focus"
+                isHtml: true,
+                trigger: "focus"
             }
         } as google.visualization.TimelineOptions;
         this.chart.draw(this.dataTable, options);
@@ -97,6 +101,7 @@ class schedulePage {
         var name = (document.querySelector("#bot-name") as HTMLInputElement)?.value
         var start = (document.querySelector("#bot-start") as HTMLInputElement)?.value
         var end = (document.querySelector("#bot-end") as HTMLInputElement)?.value
+        var scheduleId = 1; // TODO: add as parameter
 
         let newItem = {
             name,
@@ -111,12 +116,15 @@ class schedulePage {
             }
         } as scheduleItem;
         await api.schedule_add(newItem);
-        await this.reloadData();
+        await this.reloadData(scheduleId);
 
     }
-    static async initPage() {
-        await this.loadTimeline();
+    static async initPage(data: any) {
+        await this.loadTimeline(data as SchedulePageParams);
     }
+}
+interface SchedulePageParams {
+    id: number
 }
 
 class accountsPage {
@@ -141,10 +149,11 @@ class accountsPage {
     }
 
 
-    static initPage() {
+    static initPage(data: any) {
     }
+
     static async handle_CaptureAccounts() {
-        await api.schedule_createSchedule();
+        await api.schedule_createSchedule({name: "Two Acc Schedule"}); // TODO: add as parameter
     }
 }
 class general {
@@ -155,13 +164,13 @@ class general {
     }
 }
 
-function initPage(page: string) {
+function initPage(page: string, data: any) {
     switch (page) {
         case "Schedule":
-            schedulePage.initPage();
+            schedulePage.initPage(data);
             break;
         case "Accounts":
-            accountsPage.initPage();
+            accountsPage.initPage(data);
             break;
 
         default:
