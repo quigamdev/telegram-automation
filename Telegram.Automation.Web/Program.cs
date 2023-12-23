@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Mvc;
 using Telegram.Automation;
+using Telegram.Automation.Web.Facades;
 
 internal class Program
 {
@@ -44,17 +46,23 @@ internal class Program
     {
         RegisterScheduleEndpoints(app);
         RegisterAccountsEndpoints(app);
+        RegisterMaintenanceEndpoints(app);
+    }
+
+    private static void RegisterMaintenanceEndpoints(WebApplication app)
+    {
+        app.MapGet("/_maintenance/rewrite", async (HttpContext context) =>
+          await context.Response.WriteAsJsonAsync(
+              await context.RequestServices.GetRequiredService<MaintenanceFacade>().RewriteAccountsIds()));
+
     }
 
     private static void RegisterAccountsEndpoints(WebApplication app)
     {
-        app.MapPost("/account/start/{id}", async (HttpContext context, string id) =>
-         await context.Response.WriteAsJsonAsync(
-             await context.RequestServices.GetRequiredService<AccountsManager>().StartAccount(id)));
-
-        app.MapPost("/account/stop/{id}", async (HttpContext context, string id) =>
-            await context.Response.WriteAsJsonAsync(
-                await context.RequestServices.GetRequiredService<AccountsManager>().StopAccount(id)));
+        app.MapPost("/account/schedule", (HttpContext context, AccountScheduleRequest scheduleRequest) =>
+            context.RequestServices.GetRequiredService<IScheduleExecutor>().AddToScheduleAsync(scheduleRequest));
+        app.MapPost("/account/unschedule", (HttpContext context, AccountScheduleRequest scheduleRequest) =>
+             context.RequestServices.GetRequiredService<IScheduleExecutor>().RemoveFromSchedule(scheduleRequest));
     }
 
     private static void RegisterScheduleEndpoints(WebApplication app)
@@ -63,16 +71,8 @@ internal class Program
                     await context.Response.WriteAsJsonAsync(
                         await context.RequestServices.GetRequiredService<IScheduleExecutor>().GetPlan(id)));
 
-        app.MapGet("/schedule/getSchedules", async (HttpContext context) =>
-                            await context.Response.WriteAsJsonAsync(
-                                context.RequestServices.GetRequiredService<IScheduleExecutor>().GetSchedules()));
-
-        app.MapPost("/schedule/add", async (HttpContext context, ScheduleItem data, int id) =>
-            await context.RequestServices.GetRequiredService<IScheduleExecutor>().AddToSchedule(id, data));
-
         app.MapPost("/schedule/createSchedule", (HttpContext context, string name) =>
-                         context.RequestServices.GetRequiredService<IScheduleExecutor>().CreateSchadule(name));
-
+                         context.RequestServices.GetRequiredService<IScheduleExecutor>().CreateSchedule(name));
     }
 
     private static void RegisterServices(IServiceCollection services, string? mode, IConfiguration config)
@@ -82,8 +82,9 @@ internal class Program
         services.AddOptions<TelegramConnectorOptions>().Bind(config.GetSection("TelegramConnector"));
         services.AddHostedService<ScheduleHostedService>();
         services.AddSingleton<IScheduleExecutor, ScheduleExecutor>();
-        services.AddSingleton<AccountsManager>();
         services.AddSingleton<ScheduleStore>();
+        services.AddSingleton<AccountsManager>();
+        services.AddSingleton<MaintenanceFacade>();
 
         services.AddLogging(a => a.AddConsole());
         services.AddLazyCache();

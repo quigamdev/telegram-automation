@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Net.Sockets;
 using Telegram.Automation;
 
 namespace Telegram.Automation.Web.Pages;
@@ -23,18 +24,13 @@ public class IndexModel : PageModel
         Accounts = await accountsManager.GetBotAccountsAsync();
     }
 
-    public async Task<IActionResult> OnPostStartAccountAsync(string account)
+    public string RenderHideClass(bool shouldRender)
     {
-
-        var result = await accountsManager.StartAccount(account);
-        Message = $"Account activation in process! R: {result}";
-        return Page();
-    }
-
-    public async Task<IActionResult> OnPostStopAccountAsync(string account)
-    {
-        var result = await accountsManager.StopAccount(account);
-        Message = $"Account deactivation in process! R: {result}";
-        return Redirect("/?result=Account deactivation in process!");
+        if (shouldRender)
+        {
+            return "hide";
+        }
+        return "";
     }
 }
+

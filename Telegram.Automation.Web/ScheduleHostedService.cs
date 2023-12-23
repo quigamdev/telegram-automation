@@ -18,7 +18,7 @@ internal class ScheduleHostedService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
+        timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
         cancellationTokenSource = new CancellationTokenSource();
         processingTask = Task.Factory.StartNew(ExecuteSafe, TaskCreationOptions.LongRunning);
      

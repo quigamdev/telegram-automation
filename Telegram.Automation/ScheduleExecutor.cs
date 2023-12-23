@@ -17,61 +17,52 @@ public class ScheduleExecutor : IScheduleExecutor
         this.store = store;
     }
 
-    public Task AddToSchedule(int scheduleId, ScheduleItem data)
+    public async Task AddToScheduleAsync(AccountScheduleRequest data)
     {
-        var schedule = store.Get(scheduleId);
-        schedule.Plan.Add(data);
-        store.Save(schedule);
-        return Task.CompletedTask;
+        var accounts = store.GetAccountsForScheduling();
+        accounts.Add(data.AccountNumber);
+        accounts = accounts.Distinct().ToList();
+
+        store.SaveAccountsForScheduling(accounts);
+
+        await CreateSchedule("All");
     }
 
-    public void CreateRegularSchadule(string name)
+    public async Task CreateSchedule(string name)
     {
-        var scheduleItems = store.GetAccountsForScheduling();
+        var accountsForScheduling = store.GetAccountsForScheduling();
+        var scheduleItems = await manager.GetBotAccountsAsync();
 
-        scheduleItems = scheduleItems.Concat(scheduleItems).ToList();
+        scheduleItems = scheduleItems
+             .Where(s => accountsForScheduling.Contains(s.AccountNumber)).ToList();
+
+        scheduleItems = scheduleItems.Concat(scheduleItems).ToList(); // schedule the accounts twice
 
         var count = scheduleItems.Count();
-        var period = 24 * 60 / count;
-
-        var scheduled = scheduleItems.Select((name, i) =>
-            new ScheduleItem(name, name,
-                new ScheduleTime(i * period / 60, i * period % 60),
-                new ScheduleTime((i + 1) * period / 60, (i + 1) * period % 60))
-            )
-             .ToList();
+        List<ScheduleItem> scheduled = CreateSchedulePlan(scheduleItems, count);
 
         var schedule = new Schedule()
         {
             Name = name,
-            Plan = scheduled
+            Plan = scheduled,
+            Id = 1
         };
 
         store.Save(schedule);
     }
-    public void CreateSchadule(string name)
+    private List<ScheduleItem> CreateSchedulePlan(List<BotAccount> scheduleItems, int count)
     {
-        var scheduleItems = store.GetAccountsForScheduling();
-
-        scheduleItems = scheduleItems.Concat(scheduleItems).ToList();
-
-        var count = scheduleItems.Count();
-        var period = 24 * 60 / count;
-
-        var scheduled = scheduleItems.Select((name, i) =>
-            new ScheduleItem(name, name,
-                new ScheduleTime(i * period / 60, i * period % 60),
-                new ScheduleTime((i + 1) * period * 2 / 60, (i + 1) * 2 * period % 60))
-            )
-             .ToList();
-
-        var schedule = new Schedule()
-        {
-            Name = name,
-            Plan = scheduled
-        };
-
-        store.Save(schedule);
+        var period = 24 * 60 * 60 / count;
+        var scheduled = scheduleItems.Select((acc, i) =>
+            {
+                var start = TimeSpan.FromSeconds(i * period);
+                var end = TimeSpan.FromSeconds((i + 1) * period);
+                return new ScheduleItem(acc.Name, acc.AccountNumber, acc.AccountNumber,
+                        new ScheduleTime(start.Hours, start.Minutes, start.Seconds),
+                        new ScheduleTime(end.Hours, end.Minutes, end.Seconds));
+            })
+         .ToList();
+        return scheduled;
     }
 
     public async Task Execute(CancellationToken cancellationToken)
@@ -95,11 +86,11 @@ public class ScheduleExecutor : IScheduleExecutor
         {
             if (current.Count != 0)
             {
-                await StopUnattanded(schedule.Plan, current);
+                await StopUnattanded(schedule.Plan, current, cancellationToken);
 
                 var accounts = await manager.GetBotAccountsAsync();
-                var currentNames = current.Select(s => s.name).ToList();
-                var toBeActivated = accounts.Where(s => currentNames.Contains(s.Name) && s.Status != BotAccountStatus.Online).ToList();
+                var currentNames = current.Select(s => s.accountNumber).ToList();
+                var toBeActivated = accounts.Where(s => currentNames.Contains(s.AccountNumber) && s.Status != BotAccountStatus.Online).ToList();
                 if (toBeActivated.Count == 0)
                 {
                     // skip if current is already active
@@ -109,8 +100,10 @@ public class ScheduleExecutor : IScheduleExecutor
                 foreach (var item in toBeActivated)
                 {
                     // Activate the current
-                    await Task.Delay(Random.Shared.Next(100, 2_000));
-                    await manager.StartAccount(item.Name);
+                    await Task.Delay(Random.Shared.Next(100, 2_000), cancellationToken);
+                    if (cancellationToken.IsCancellationRequested) return;
+
+                    await manager.StartAccount(item.AccountNumber);
                 }
                 ActiveItems = current;
             }
@@ -121,8 +114,10 @@ public class ScheduleExecutor : IScheduleExecutor
             {
                 foreach (var item in ActiveItems)
                 {
-                    await Task.Delay(Random.Shared.Next(100, 3_000));
-                    await manager.StopAccount(item.name);
+                    await Task.Delay(Random.Shared.Next(100, 3_000), cancellationToken);
+                    if (cancellationToken.IsCancellationRequested) return;
+
+                    await manager.StopAccount(item.accountNumber);
                 }
                 ActiveItems = new();
             }
@@ -131,33 +126,36 @@ public class ScheduleExecutor : IScheduleExecutor
                 foreach (var item in ActiveItems)
                 {
                     // main switching sequence
-                    await Task.Delay(Random.Shared.Next(100, 16_000));
-                    await manager.StopAccount(item.name);
+                    await Task.Delay(Random.Shared.Next(100, 10_000), cancellationToken);
+                    if (cancellationToken.IsCancellationRequested) return;
+                    await manager.StopAccount(item.accountNumber);
                 }
                 foreach (var item in current)
                 {
-                    await Task.Delay(Random.Shared.Next(100, 16_000));
-                    await manager.StartAccount(item.name);
+                    await Task.Delay(Random.Shared.Next(100, 10_000), cancellationToken);
+                    if (cancellationToken.IsCancellationRequested) return;
+                    await manager.StartAccount(item.accountNumber);
                 }
                 ActiveItems = current;
             }
         }
     }
 
-    private async Task StopUnattanded(List<ScheduleItem> schedule, List<ScheduleItem> current)
+    private async Task StopUnattanded(List<ScheduleItem> schedule, List<ScheduleItem> current, CancellationToken token)
     {
-        var accountsInSchedule = schedule.Select(s => s.name).ToList();
+        var accountsInSchedule = schedule.Select(s => s.accountNumber).ToList();
         var accounts = await manager.GetBotAccountsAsync();
 
-        var currentAccs = current.Select(s => s.name).ToList();
+        var currentAccs = current.Select(s => s.accountNumber).ToList();
         var toBeStoped = accounts.Where(s => s.Status == BotAccountStatus.Online)
-            .Where(s => accountsInSchedule.Contains(s.Name))
-            .Where(s => !currentAccs.Contains(s.Name)).ToList();
+            .Where(s => accountsInSchedule.Contains(s.AccountNumber))
+            .Where(s => !currentAccs.Contains(s.AccountNumber)).ToList();
 
         foreach (var a in toBeStoped)
         {
-            await Task.Delay(Random.Shared.Next(100, 1000));
-            await manager.StopAccount(a.Name);
+            if (token.IsCancellationRequested) return;
+            await Task.Delay(Random.Shared.Next(100, 1000), token);
+            await manager.StopAccount(a.AccountNumber);
         }
 
     }
@@ -166,19 +164,22 @@ public class ScheduleExecutor : IScheduleExecutor
     {
         var now = DateTime.Now;
         return schedule.Where(
-            s => s.start.hour * 60 + s.start.minute <= now.Hour * 60 + now.Minute &&
-            s.end.hour * 60 + s.end.minute > now.Hour * 60 + now.Minute).ToList();
+            s => new TimeSpan(s.start.hour, s.start.minute, s.start.seconds) <= now.TimeOfDay &&
+            new TimeSpan(s.end.hour, s.end.minute, s.end.seconds) > now.TimeOfDay).ToList();
     }
 
-    public Task<List<ScheduleItem>> GetPlan(int id)
+    public Task<List<ScheduleItem>> GetPlan(int id = 1)
     {
-        var schedule = store.Get(id).Plan.OrderBy(s => s.name).ToList();
+        var schedule = store.GetSchedule().Plan.OrderBy(s => s.name).ToList();
         return Task.FromResult(schedule.ToList());
     }
 
-    public List<ScheduleSimple> GetSchedules()
+    public async Task RemoveFromSchedule(AccountScheduleRequest data)
     {
-        var all = store.Get();
-        return all.Select(s => new ScheduleSimple() { Id = s.Id, IsActive = s.IsActive, Name = s.Name }).ToList();
+        var accounts = store.GetAccountsForScheduling();
+        accounts = accounts.Where(s => data.AccountNumber != s).ToList();
+
+        store.SaveAccountsForScheduling(accounts);
+        await CreateSchedule("All");
     }
 }

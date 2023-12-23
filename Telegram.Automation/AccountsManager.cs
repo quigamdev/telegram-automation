@@ -5,22 +5,33 @@ using Telegram.Automation;
 public class AccountsManager
 {
     private const string CachKey = "Accounts";
+    private readonly ScheduleStore store;
     private IAppCache cache = new CachingService();
 
-    public AccountsManager(ITelegramConnector telegramConnector)
+    public AccountsManager(ITelegramConnector telegramConnector, ScheduleStore store)
     {
         connector = telegramConnector;
+        this.store = store;
     }
 
     private ITelegramConnector connector { get; }
 
     public async Task<List<BotAccount>> GetBotAccountsAsync()
     {
-        return await cache.GetOrAddAsync(CachKey, async (e) =>
+        var acc = await cache.GetOrAddAsync(CachKey, async (e) =>
         {
             e.AbsoluteExpiration = DateTimeOffset.UtcNow.AddMinutes(2);
-            return await RefreshBotsAccounts();
+            var bots = await RefreshBotsAccounts();
+            return bots;
         });
+
+        var scheduling = store.GetAccountsForScheduling();
+        acc.ForEach(s =>
+        {
+            s.IsScheduled = scheduling.Contains(s.AccountNumber);
+        });
+
+        return acc;
     }
 
     private async Task<List<BotAccount>> RefreshBotsAccounts()

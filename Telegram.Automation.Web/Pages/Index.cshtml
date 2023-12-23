@@ -8,9 +8,17 @@
     table {
         width: 100%;
     }
+    table.table th, table.table td {
+            padding: 0.2rem;
+            vertical-align: middle;
+    }
+
 
     .accounts_actions {
         width: 10rem;
+    }
+    .hide {
+        display:none;
     }
 </style>
 <!-- DataTales Example -->
@@ -52,17 +60,13 @@
                                 @account.Name
                             </td>
                             <td>@account.Status</td>
-                            <td>@account.NextSchedule</td>
-                            <td class="accounts_actions" data-name="@account.Name">
-                                <a href="#" class="btn btn-success btn-icon-split" onclick="accountsPage.handle_Start(this)">
-                                    <span class="icon text-white-50">
-                                        <i class="fas fa-play"></i>
-                                    </span>
+                            <td>@(account.IsScheduled ? "Yes" : "No")</td>
+                            <td class="accounts_actions" data-name="@account.AccountNumber">
+                                <a href="#" class="btn btn-primary @Model.RenderHideClass(account.IsScheduled)" onclick="accountsPage.handle_Schedule(this);return false;">
+                                    Schedule
                                 </a>
-                                <a href="#" class="btn btn-danger btn-icon-split" onclick="accountsPage.handle_Stop(this)">
-                                    <span class="icon text-white-50">
-                                        <i class="fas fa-stop"></i>
-                                    </span>
+                                <a href="#" class="btn btn-danger @Model.RenderHideClass(!account.IsScheduled)" onclick="accountsPage.handle_Unschedule(this)">
+                                    Unschedule
                                 </a>
                             </td>
                         </tr>

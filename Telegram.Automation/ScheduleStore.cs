@@ -10,15 +10,16 @@ public class ScheduleStore
     private const string scheduleAccountsFile = "scheduleAccounts.json";
     public List<Schedule> GetActiveSchedules()
     {
-        return Get().Where(s => s.IsActive).ToList();
+        return GetAll().ToList();
     }
-    public Schedule Get(int id)
+
+    public Schedule GetSchedule(int id = 1)
     {
-        var schedules = Get();
+        var schedules = GetAll();
         return schedules.FirstOrDefault(s => s.Id == id) ?? new();
 
     }
-    public List<Schedule> Get()
+    private List<Schedule> GetAll()
     {
         try
         {
@@ -33,17 +34,18 @@ public class ScheduleStore
 
     public void Save(Schedule schedule)
     {
-        var schedules = Get();
+        var schedules = GetAll();
 
-        if (schedule.Id == 0)
-        {
-            schedule.Id = schedules.Count + 1;
-        }
+        //if (schedule.Id == 0)
+        //{
+        //    schedule.Id = schedules.Count + 1;
+        //}
 
-        var toBeSaved = schedules.Where(s => s.Id != schedule.Id).ToList();
-        toBeSaved.Add(schedule);
+        //var toBeSaved = schedules.Where(s => s.Id != schedule.Id).ToList();
+        //toBeSaved.Add(schedule);
 
-        var data = JsonSerializer.Serialize(toBeSaved);
+
+        var data = JsonSerializer.Serialize(new List<Schedule>() { schedule });
         File.WriteAllText(scheduleFile, data);
     }
 
@@ -61,7 +63,6 @@ public class ScheduleStore
     }
     public void SaveAccountsForScheduling(List<string> schedule)
     {
-
         var data = JsonSerializer.Serialize(schedule);
         File.WriteAllText(scheduleAccountsFile, data);
     }

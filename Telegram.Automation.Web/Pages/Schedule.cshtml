@@ -3,21 +3,26 @@
     ViewData["Title"] = "Schedule";
 }
 @model Telegram.Automation.Web.Pages.ScheduleModel
-
-<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js" ></script>
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 <script type="text/javascript">
     var initData = @Model.InitData;
 </script>
 <script type="text/javascript">initPage("Schedule", initData)</script>
 
-<div class="input-group">
-    <input class="form-control bg-light" placeholder="name" type="text" name="bot-name" id="bot-name" />
-    <input class="form-control bg-light" placeholder="start (hh:mm)" type="text" name="bot-start" id="bot-start" />
-    <input class="form-control bg-light" placeholder="end (hh:mm)" type="text" name="bot-end" id="bot-end" />
-    <div class="input-group-append">
-        <button class="btn btn-primary" onclick="schedulePage.add()" type="button">
-            Add
-        </button>
+<div class="card border-left-primary" style="margin-bottom:1rem">
+    <div class="card-body">
+        Total scheduled accounts: <span id="totalCount"> </span>
     </div>
 </div>
-<div id="Schedule" style="height:100vh;"></div>
+@* 
+    <div>
+    <div class="input-group" style="width: 30rem; margin:1rem;">
+        <input class="form-control bg-light" placeholder="Concurrent accounts" type="text" name="bot-concurrent" id="bot-concurrent" />
+        <div class="input-group-append">
+            <a href="#" class="btn btn-secondary btn-" onclick="">
+                Reschedule
+            </a>
+        </div>
+    </div>
+</div> *@
+<div id="Schedule"></div>

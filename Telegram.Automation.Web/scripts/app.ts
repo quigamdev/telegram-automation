@@ -12,14 +12,18 @@
     static async schedule_get(id: number) {
         return await fetch(`/schedule/get/${id}`);
     }
-    static async accounts_start(id: string) {
-        return await fetch(`/account/start/${id}`, {
-            method: "POST"
+    static async accounts_unschedule(id: string) {
+        return await fetch(`/account/unschedule`, {
+            method: "POST",
+            headers: this.headers, 
+            body: JSON.stringify({AccountNumber: id})
         });
     }
-    static async accounts_stop(id: string) {
-        return await fetch(`/account/stop/${id}`, {
+    static async accounts_schedule(id: string) {
+        return await fetch(`/account/schedule`, {
             method: "POST",
+            headers: this.headers, 
+            body: JSON.stringify({AccountNumber: id})
         });
     }
     static async schedule_createSchedule(data: { name: string }) {
@@ -68,7 +72,7 @@ class schedulePage {
     private static async reloadData(scheduleId: number) {
         var response = await api.schedule_get(scheduleId);
         schedulePage.data = await response.json();
-
+        
         var rows = [];
 
         for (let row of schedulePage.data) {
@@ -82,14 +86,26 @@ class schedulePage {
         var options = {
             timeline: {
                 colorByRowLabel: true,
-                showBarLabels: false
+                showBarLabels: false,
+                barLabelStyle: {
+                    fontSize: 10
+                }
             },
             tooltip: {
                 isHtml: true,
                 trigger: "focus"
-            }
+            }, 
+            height:1000
         } as google.visualization.TimelineOptions;
         this.chart.draw(this.dataTable, options);
+        this.updateTotalCount();
+
+    }
+    static updateTotalCount() {
+        var length = new Set(schedulePage.data.map(s => s.name)).size;
+        var span = document.querySelector("#totalCount") as HTMLSpanElement;
+        if (!span) return;
+        span.innerText = span.textContent = length.toString();
     }
 
     private static getCurrentSelectedItem() {
@@ -128,24 +144,32 @@ interface SchedulePageParams {
 }
 
 class accountsPage {
-    static async handle_Start(elm: HTMLElement) {
+    static async handle_Unschedule(elm: HTMLElement) {
         let td = elm.parentElement;
         let accountName = td?.dataset["name"] as string;
         if (!accountName) return;
 
-        let response = await api.accounts_start(accountName);
-        let data = await response.json();
-        general.showMessage(data);
+        let response = await api.accounts_unschedule(accountName);
+        if (response.status != 200) {
+            general.showMessage("Unscheduling failed!");
+            return;
+        }
+
+        window.location.reload();
 
     }
-    static async handle_Stop(elm: HTMLElement) {
+    static async handle_Schedule(elm: HTMLElement) {
         let td = elm.parentElement;
         var accountName = td?.dataset["name"] as string;
         if (!accountName) return;
 
-        let response = await api.accounts_stop(accountName);
-        let data = await response.json();
-        general.showMessage(data);
+        let response = await api.accounts_schedule(accountName);
+        if (response.status != 200) {
+            general.showMessage("Scheduling failed!");
+            return;
+        }
+
+        window.location.reload();
     }
 
 
@@ -172,10 +196,10 @@ function initPage(page: string, data: any) {
         case "Accounts":
             accountsPage.initPage(data);
             break;
-
         default:
     }
 }
+
 var chartInstance = null;
 
 interface scheduleItem {
@@ -184,6 +208,7 @@ interface scheduleItem {
     start: scheduleTime
     end: scheduleTime
 }
+
 interface scheduleTime {
     hour: number
     minute: number
