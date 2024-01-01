@@ -8,20 +8,13 @@ using static TdLib.TdApi.Update;
 
 namespace Telegram.Automation;
 
-public class TelegramConnector : IDisposable, ITelegramConnector
+public class TelegramConnector(IOptions<TelegramConnectorOptions> settings, ILogger<ITelegramConnector> logger) : IDisposable, ITelegramConnector
 {
     private static SemaphoreSlim locker = new SemaphoreSlim(1, 1);
-    private readonly TelegramConnectorOptions settings;
-    private readonly ILogger<ITelegramConnector> logger;
+    private readonly TelegramConnectorOptions settings = settings.Value;
     private TdClient client;
     private Queue<UpdateChatLastMessage> Messages { get; set; } = new();
     private List<MessageLog> messagesLog = new();
-
-    public TelegramConnector(IOptions<TelegramConnectorOptions> settings, ILogger<ITelegramConnector> logger)
-    {
-        this.settings = settings.Value;
-        this.logger = logger;
-    }
 
     public void Dispose()
     {
@@ -34,25 +27,33 @@ public class TelegramConnector : IDisposable, ITelegramConnector
 
         if (client != null) return await Authenticate(CancellationToken.None);
         await locker.WaitAsync();
-        if (client != null) return await Authenticate(CancellationToken.None);
+        try
+        {
+            if (client != null) return await Authenticate(CancellationToken.None);
 
-        client = new TdClient();
+            client = new TdClient();
 
-        await SetLoggingLevel();
+            await SetLoggingLevel();
 
-        client.UpdateReceived += Client_UpdateReceived;
+            client.UpdateReceived += Client_UpdateReceived;
 
-        await client.SetTdlibParametersAsync(
-            useSecretChats: true,
-            useFileDatabase: true,
-            databaseDirectory: settings.DatabaseLocation,
-            apiId: settings.ApiID,
-            apiHash: settings.ApiHash,
-            systemLanguageCode: "en-US",
-            deviceModel: "Desktop",
-            applicationVersion: "0.1.0.0");
+            await client.SetTdlibParametersAsync(
+                useSecretChats: true,
+                useFileDatabase: true,
+                databaseDirectory: settings.DatabaseLocation,
+                apiId: settings.ApiID,
+                apiHash: settings.ApiHash,
+                systemLanguageCode: "en-US",
+                deviceModel: "Desktop",
+                applicationVersion: "0.1.0.0");
 
-        return await Authenticate(CancellationToken.None);
+            return await Authenticate(CancellationToken.None);
+        }
+        finally
+        {
+
+            locker.Release();
+        }
     }
 
     private async Task SetLoggingLevel()
@@ -121,14 +122,11 @@ public class TelegramConnector : IDisposable, ITelegramConnector
     public async Task InitAuthentication() => await client.SetAuthenticationPhoneNumberAsync(settings.PhoneNumber);
     public async Task CheckAuthCode(string code) => await client.CheckAuthenticationCodeAsync(code);
 
-    private void Handle_UpdateAuthorizationState(UpdateAuthorizationState status)
-    {
-        logger.LogInformation($"Authentication Status: {status.AuthorizationState.Extra}");
-    }
-    private void Handle_UpdateChatLastMessage(UpdateChatLastMessage lastMessageUpdate)
-    {
-        Messages.Enqueue(lastMessageUpdate);
-    }
+    private void Handle_UpdateAuthorizationState(UpdateAuthorizationState status) 
+        => logger.LogInformation($"Authentication Status: {status.AuthorizationState.Extra}");
+    
+    private void Handle_UpdateChatLastMessage(UpdateChatLastMessage lastMessageUpdate) 
+        => Messages.Enqueue(lastMessageUpdate);
 
     private void Client_UpdateReceived(object? sender, Update e)
     {
