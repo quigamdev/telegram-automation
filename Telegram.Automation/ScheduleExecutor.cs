@@ -1,23 +1,18 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Xml.Linq;
-
-namespace Telegram.Automation;
+﻿namespace Telegram.Automation;
 
 public class ScheduleExecutor : IScheduleExecutor
 {
-    private readonly ILogger<ScheduleExecutor> logger;
     private readonly AccountsManager manager;
     private readonly ScheduleStore store;
     private List<ScheduleItem> ActiveItems = new();
 
-    public ScheduleExecutor(ILogger<ScheduleExecutor> logger, AccountsManager manager, ScheduleStore store)
+    public ScheduleExecutor(AccountsManager manager, ScheduleStore store)
     {
-        this.logger = logger;
         this.manager = manager;
         this.store = store;
     }
 
-    public async Task AddToScheduleAsync(AccountScheduleRequest data)
+    public async Task AddToScheduleAsync(AccountScheduleRequest data, int concurrency)
     {
         var accounts = store.GetAccountsForScheduling();
         accounts.Add(data.AccountNumber);
@@ -25,10 +20,10 @@ public class ScheduleExecutor : IScheduleExecutor
 
         store.SaveAccountsForScheduling(accounts);
 
-        await CreateSchedule("All");
+        await CreateSchedule("All", concurrency);
     }
 
-    public async Task CreateSchedule(string name)
+    public async Task CreateSchedule(string name, int concurrency)
     {
         var accountsForScheduling = store.GetAccountsForScheduling();
         var scheduleItems = await manager.GetBotAccountsAsync();
@@ -39,7 +34,7 @@ public class ScheduleExecutor : IScheduleExecutor
         scheduleItems = scheduleItems.Concat(scheduleItems).ToList(); // schedule the accounts twice
 
         var count = scheduleItems.Count();
-        List<ScheduleItem> scheduled = CreateSchedulePlan(scheduleItems, count, 2);
+        List<ScheduleItem> scheduled = CreateSchedulePlan(scheduleItems, count, concurrency);
 
         var schedule = new Schedule()
         {
@@ -80,7 +75,6 @@ public class ScheduleExecutor : IScheduleExecutor
     {
 
         var current = GetCurrent(schedule.Plan);
-
 
         if (current.SequenceEqual(ActiveItems)) return;
 
@@ -176,12 +170,12 @@ public class ScheduleExecutor : IScheduleExecutor
         return Task.FromResult(schedule.ToList());
     }
 
-    public async Task RemoveFromSchedule(AccountScheduleRequest data)
+    public async Task RemoveFromSchedule(AccountScheduleRequest data, int concurrency)
     {
         var accounts = store.GetAccountsForScheduling();
         accounts = accounts.Where(s => data.AccountNumber != s).ToList();
 
         store.SaveAccountsForScheduling(accounts);
-        await CreateSchedule("All");
+        await CreateSchedule("All", concurrency);
     }
 }

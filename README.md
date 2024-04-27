@@ -1,1 +1,2 @@
-# telegram-automation
+# Telegram Account Management Automation (TAMA)
+TAMA is a hoby project (read "not maintained on regular basis") that automates starting and stopping accounts in LOM game according to specified schedule.

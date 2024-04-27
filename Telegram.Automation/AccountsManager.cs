@@ -1,5 +1,4 @@
 ﻿using LazyCache;
-using System.Data.Common;
 using Telegram.Automation;
 
 public class AccountsManager

@@ -59,20 +59,28 @@ internal class Program
 
     private static void RegisterAccountsEndpoints(WebApplication app)
     {
+        int concurrency = GetConcurrency(app); 
         app.MapPost("/account/schedule", (HttpContext context, AccountScheduleRequest scheduleRequest) =>
-            context.RequestServices.GetRequiredService<IScheduleExecutor>().AddToScheduleAsync(scheduleRequest));
+            context.RequestServices.GetRequiredService<IScheduleExecutor>().AddToScheduleAsync(scheduleRequest, concurrency));
         app.MapPost("/account/unschedule", (HttpContext context, AccountScheduleRequest scheduleRequest) =>
-             context.RequestServices.GetRequiredService<IScheduleExecutor>().RemoveFromSchedule(scheduleRequest));
+             context.RequestServices.GetRequiredService<IScheduleExecutor>().RemoveFromSchedule(scheduleRequest, concurrency));
     }
 
     private static void RegisterScheduleEndpoints(WebApplication app)
     {
+        int concurrency = GetConcurrency(app);
+
         app.MapGet("/schedule/get/{id}", async (HttpContext context, [FromRoute] int id) =>
                     await context.Response.WriteAsJsonAsync(
                         await context.RequestServices.GetRequiredService<IScheduleExecutor>().GetPlan(id)));
 
         app.MapPost("/schedule/createSchedule", (HttpContext context, string name) =>
-                         context.RequestServices.GetRequiredService<IScheduleExecutor>().CreateSchedule(name));
+                         context.RequestServices.GetRequiredService<IScheduleExecutor>().CreateSchedule(name, concurrency));
+    }
+
+    private static int GetConcurrency(WebApplication app)
+    {
+        return int.TryParse(app.Configuration["ScheduleConcurrency"], out var value) ? value : 1;
     }
 
     private static void RegisterServices(IServiceCollection services, string? mode, IConfiguration config)
