@@ -33,8 +33,7 @@ public class ScheduleExecutor : IScheduleExecutor
 
         scheduleItems = scheduleItems.Concat(scheduleItems).ToList(); // schedule the accounts twice
 
-        var count = scheduleItems.Count();
-        List<ScheduleItem> scheduled = CreateSchedulePlan(scheduleItems, count, concurrency);
+        List<ScheduleItem> scheduled = CreateSchedulePlan(scheduleItems, concurrency);
 
         var schedule = new Schedule()
         {
@@ -45,10 +44,13 @@ public class ScheduleExecutor : IScheduleExecutor
 
         store.Save(schedule);
     }
-    private List<ScheduleItem> CreateSchedulePlan(List<BotAccount> scheduleItems, int count, int concurrent)
+    private List<ScheduleItem> CreateSchedulePlan(List<BotAccount> scheduleItems, int concurrent)
     {
-        var period = (24 * 60 * 60 - 1) / count;
-        period = period * concurrent;
+        var count = scheduleItems.Count;
+        
+        var n = Math.Ceiling(count / (double)concurrent);
+        var period = (24 * 60 * 60 - 1) / n;
+
         var scheduled = scheduleItems.Select((acc, i) =>
             {
                 var j = i / concurrent;
