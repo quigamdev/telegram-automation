@@ -66,5 +66,5 @@ StyleCop.Cache
 **.txt
 
 **/node_modules/**
-Telegram.Automation.Web/wwwroot/scripts/**
-Properties/PublishProfiles/**
+/Telegram.Automation.Web/wwwroot/scripts/**
+**/PublishProfiles/**
