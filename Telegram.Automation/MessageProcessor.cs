@@ -8,7 +8,7 @@ public class MessageProcessor
 
     public static List<BotAccount> ProcessStatusMessage(string input)
     {
-        if (!input.Contains("Active:")) return new List<BotAccount>();
+        if (input is null || !input.Contains("Active:")) return new List<BotAccount>();
 
         var lines = input.Split(new[] { '\r', '\n' }).Select(s => s.Trim()).Where(s => !string.IsNullOrWhiteSpace(s)).Skip(1).ToList();
         var isOnline = false;

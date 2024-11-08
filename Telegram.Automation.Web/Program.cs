@@ -93,7 +93,8 @@ internal class Program
         services.AddSingleton<ScheduleStore>();
         services.AddSingleton<AccountsManager>();
         services.AddSingleton<MaintenanceFacade>();
-
+        services.AddSingleton<IDateTimeProvider, DefaultDateTimeProvider>();
+        
         services.AddLogging(a => a.AddConsole());
         services.AddLazyCache();
 

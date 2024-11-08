@@ -14,12 +14,12 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="LazyCache.AspNetCore" Version="2.4.0" />
-		<PackageReference Include="Microsoft.Extensions.Configuration" Version="7.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
-		<PackageReference Include="Microsoft.Extensions.Options" Version="7.0.1" />
-		<PackageReference Include="TDLib" Version="1.8.12" />
-		<PackageReference Include="tdlib.native" Version="1.8.12" />
+		<PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+		<PackageReference Include="TDLib" Version="1.8.29" />
+		<PackageReference Include="tdlib.native" Version="1.8.29" />
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="Contracts\" />

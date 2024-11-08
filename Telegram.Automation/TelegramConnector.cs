@@ -122,10 +122,10 @@ public class TelegramConnector(IOptions<TelegramConnectorOptions> settings, ILog
     public async Task InitAuthentication() => await client.SetAuthenticationPhoneNumberAsync(settings.PhoneNumber);
     public async Task CheckAuthCode(string code) => await client.CheckAuthenticationCodeAsync(code);
 
-    private void Handle_UpdateAuthorizationState(UpdateAuthorizationState status) 
+    private void Handle_UpdateAuthorizationState(UpdateAuthorizationState status)
         => logger.LogInformation($"Authentication Status: {status.AuthorizationState.Extra}");
-    
-    private void Handle_UpdateChatLastMessage(UpdateChatLastMessage lastMessageUpdate) 
+
+    private void Handle_UpdateChatLastMessage(UpdateChatLastMessage lastMessageUpdate)
         => Messages.Enqueue(lastMessageUpdate);
 
     private void Client_UpdateReceived(object? sender, Update e)
@@ -160,6 +160,7 @@ public class TelegramConnector(IOptions<TelegramConnectorOptions> settings, ILog
             {
                 while (Messages.TryDequeue(out var update) && !token.IsCancellationRequested)
                 {
+                    if (update is null) continue;
                     if (update.ChatId != chatId) continue;
                     if ((update.LastMessage.SenderId as MessageSenderUser)?.UserId == senderId) continue;
 

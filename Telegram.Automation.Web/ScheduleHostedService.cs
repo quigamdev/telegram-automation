@@ -4,11 +4,13 @@ internal class ScheduleHostedService : IHostedService
 {
     private readonly IScheduleExecutor executor;
     private readonly ILogger<ScheduleHostedService> logger;
+    private readonly IDateTimeProvider dateTimeProvider;
 
-    public ScheduleHostedService(IScheduleExecutor executor, ILogger<ScheduleHostedService> logger)
+    public ScheduleHostedService(IScheduleExecutor executor, ILogger<ScheduleHostedService> logger, IDateTimeProvider dateTimeProvider)
     {
         this.executor = executor;
         this.logger = logger;
+        this.dateTimeProvider = dateTimeProvider;
     }
     private PeriodicTimer? timer;
     private CancellationToken cancellationToken;
@@ -16,37 +18,38 @@ internal class ScheduleHostedService : IHostedService
 
     private Task? processingTask;
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
         timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
         cancellationTokenSource = new CancellationTokenSource();
-        processingTask = Task.Factory.StartNew(ExecuteSafe, TaskCreationOptions.LongRunning);
-     
-        await executor.Execute(cancellationToken);
+        processingTask = Task.Factory.StartNew(ExecutePeriodicaly, TaskCreationOptions.LongRunning);
+
+        _ = Task.Run(Execute);
+
+        return Task.CompletedTask;
     }
 
-    private async Task ExecuteSafe()
+    private async Task ExecutePeriodicaly()
     {
-        try
+        while (await timer!.WaitForNextTickAsync(cancellationToken) && !cancellationToken.IsCancellationRequested)
         {
             await Execute();
         }
-        catch (TaskCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogCritical(ex, $"ScheduledHostedService failed to execute schedule ({DateTime.Now})");
-        }
-
     }
 
     private async Task Execute()
     {
-        while (await timer!.WaitForNextTickAsync(cancellationToken) && !cancellationToken.IsCancellationRequested)
+        try
         {
             await executor.Execute(cancellationToken);
+        }
+        catch (TaskCanceledException)
+        {
+            // ignore
+        }
+        catch (Exception ex)
+        {
+            logger.LogCritical(ex, $"ScheduledHostedService failed to execute schedule ({dateTimeProvider.Now})");
         }
     }
 

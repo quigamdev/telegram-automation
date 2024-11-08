@@ -4,12 +4,14 @@ public class ScheduleExecutor : IScheduleExecutor
 {
     private readonly AccountsManager manager;
     private readonly ScheduleStore store;
+    private readonly IDateTimeProvider dateTimeProvider;
     private List<ScheduleItem> ActiveItems = new();
 
-    public ScheduleExecutor(AccountsManager manager, ScheduleStore store)
+    public ScheduleExecutor(AccountsManager manager, ScheduleStore store, IDateTimeProvider dateTimeProvider)
     {
         this.manager = manager;
         this.store = store;
+        this.dateTimeProvider = dateTimeProvider;
     }
 
     public async Task AddToScheduleAsync(AccountScheduleRequest data, int concurrency)
@@ -31,7 +33,7 @@ public class ScheduleExecutor : IScheduleExecutor
         scheduleItems = scheduleItems
              .Where(s => accountsForScheduling.Contains(s.AccountNumber)).ToList();
 
-        scheduleItems = scheduleItems.Concat(scheduleItems).ToList(); // schedule the accounts twice
+        scheduleItems = scheduleItems.Concat(scheduleItems).Concat(scheduleItems).ToList(); // schedule the accounts twice
 
         List<ScheduleItem> scheduled = CreateSchedulePlan(scheduleItems, concurrency);
 
@@ -39,7 +41,8 @@ public class ScheduleExecutor : IScheduleExecutor
         {
             Name = name,
             Plan = scheduled,
-            Id = 1
+            Id = 1,
+            IsActive = true
         };
 
         store.Save(schedule);
@@ -47,20 +50,39 @@ public class ScheduleExecutor : IScheduleExecutor
     private List<ScheduleItem> CreateSchedulePlan(List<BotAccount> scheduleItems, int concurrent)
     {
         var count = scheduleItems.Count;
-        
-        var n = Math.Ceiling(count / (double)concurrent);
-        var period = (24 * 60 * 60 - 1) / n;
 
-        var scheduled = scheduleItems.Select((acc, i) =>
-            {
-                var j = i / concurrent;
-                var start = TimeSpan.FromSeconds(j * period);
-                var end = TimeSpan.FromSeconds((j + 1) * period);
-                return new ScheduleItem(acc.Name, acc.AccountNumber, acc.AccountNumber,
-                        new ScheduleTime(start.Hours, start.Minutes, start.Seconds),
-                        new ScheduleTime(end.Hours, end.Minutes, end.Seconds));
-            })
-         .ToList();
+        var numberOfGroups = Math.Ceiling(count / (double)concurrent);
+        var lastGroupSize = count % concurrent;
+        var remainingSlotsInLastGroup = lastGroupSize == 0 ? 0 : concurrent - lastGroupSize;
+
+        var period = (24 * 60 * 60 - 1) / numberOfGroups;
+
+        Func<BotAccount, int, ScheduleItem> createScheduleItem = (acc, i) =>
+        {
+            var j = i / concurrent;
+            var start = TimeSpan.FromSeconds(j * period);
+            var end = TimeSpan.FromSeconds((j + 1) * period);
+            return new ScheduleItem(acc.Name, acc.AccountNumber, acc.AccountNumber,
+                    new ScheduleTime(start.Hours, start.Minutes, start.Seconds),
+                    new ScheduleTime(end.Hours, end.Minutes, end.Seconds));
+        };
+
+        var scheduled = scheduleItems.Select(createScheduleItem).ToList();
+
+        // optimize last group
+        if (lastGroupSize > 0)
+        {
+            var lastSlots = scheduled.TakeLast(lastGroupSize);
+            var lastSlotAccounts = lastSlots.Select(s => s.accountNumber).Distinct();
+
+            var fillement = scheduleItems.DistinctBy(s => s.AccountNumber)
+                .Where(s => !lastSlotAccounts.Contains(s.AccountNumber))
+                .TakeLast(remainingSlotsInLastGroup)
+                .Select(s => createScheduleItem(s, scheduleItems.Count));
+            
+            scheduled.AddRange(fillement);
+        }
+
         return scheduled;
     }
 
@@ -160,7 +182,7 @@ public class ScheduleExecutor : IScheduleExecutor
 
     private List<ScheduleItem> GetCurrent(List<ScheduleItem> schedule)
     {
-        var now = DateTime.Now;
+        var now = dateTimeProvider.Now;
         return schedule.Where(
             s => new TimeSpan(s.start.hour, s.start.minute, s.start.seconds) <= now.TimeOfDay &&
             new TimeSpan(s.end.hour, s.end.minute, s.end.seconds) > now.TimeOfDay).ToList();
