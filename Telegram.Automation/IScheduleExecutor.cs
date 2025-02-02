@@ -3,9 +3,9 @@ namespace Telegram.Automation;
 
 public interface IScheduleExecutor
 {
-    Task AddToScheduleAsync(AccountScheduleRequest data, int concurrency);
-    Task RemoveFromSchedule(AccountScheduleRequest data, int concurrency);
-    Task CreateSchedule(string name, int concurrency);
+    Task AddToScheduleAsync(AccountScheduleRequest data, ScheduleOptions scheduleOptions);
+    Task RemoveFromSchedule(AccountScheduleRequest data, ScheduleOptions scheduleOptions);
+    Task CreateSchedule(string name, ScheduleOptions concurrency);
     Task Execute(CancellationToken cancellationToken);
     Task<List<ScheduleItem>> GetPlan(int id = 1);
 }

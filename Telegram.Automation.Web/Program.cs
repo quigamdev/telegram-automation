@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Telegram.Automation;
 using Telegram.Automation.Web.Facades;
 
@@ -59,42 +60,46 @@ internal class Program
 
     private static void RegisterAccountsEndpoints(WebApplication app)
     {
-        int concurrency = GetConcurrency(app); 
         app.MapPost("/account/schedule", (HttpContext context, AccountScheduleRequest scheduleRequest) =>
-            context.RequestServices.GetRequiredService<IScheduleExecutor>().AddToScheduleAsync(scheduleRequest, concurrency));
+            context.RequestServices.GetRequiredService<IScheduleExecutor>().AddToScheduleAsync(scheduleRequest, GetScheduleOptions(context)));
         app.MapPost("/account/unschedule", (HttpContext context, AccountScheduleRequest scheduleRequest) =>
-             context.RequestServices.GetRequiredService<IScheduleExecutor>().RemoveFromSchedule(scheduleRequest, concurrency));
+             context.RequestServices.GetRequiredService<IScheduleExecutor>().RemoveFromSchedule(scheduleRequest, GetScheduleOptions(context)));
     }
 
     private static void RegisterScheduleEndpoints(WebApplication app)
     {
-        int concurrency = GetConcurrency(app);
 
         app.MapGet("/schedule/get/{id}", async (HttpContext context, [FromRoute] int id) =>
                     await context.Response.WriteAsJsonAsync(
                         await context.RequestServices.GetRequiredService<IScheduleExecutor>().GetPlan(id)));
 
         app.MapPost("/schedule/createSchedule", (HttpContext context, string name) =>
-                         context.RequestServices.GetRequiredService<IScheduleExecutor>().CreateSchedule(name, concurrency));
+                         context.RequestServices.GetRequiredService<IScheduleExecutor>().CreateSchedule(name,
+                         GetScheduleOptions(context)));
     }
 
-    private static int GetConcurrency(WebApplication app)
-    {
-        return int.TryParse(app.Configuration["ScheduleConcurrency"], out var value) ? value : 1;
-    }
+    private static ScheduleOptions GetScheduleOptions(HttpContext context)
+        => context.RequestServices.GetRequiredService<IOptionsSnapshot<ScheduleOptions>>().Value;
 
     private static void RegisterServices(IServiceCollection services, string? mode, IConfiguration config)
     {
         // Add services to the container.
         services.AddRazorPages();
         services.AddOptions<TelegramConnectorOptions>().Bind(config.GetSection("TelegramConnector"));
+        services.AddOptions<ScheduleOptions>().Bind(config.GetSection("Schedule"));
         services.AddHostedService<ScheduleHostedService>();
         services.AddSingleton<IScheduleExecutor, ScheduleExecutor>();
         services.AddSingleton<ScheduleStore>();
         services.AddSingleton<AccountsManager>();
         services.AddSingleton<MaintenanceFacade>();
         services.AddSingleton<IDateTimeProvider, DefaultDateTimeProvider>();
-        
+
+        services.PostConfigure<ScheduleOptions>(s =>
+        {
+            s.Concurrency = s.Concurrency > 0 ? s.Concurrency : 1;
+            s.Repeat = s.Repeat > 0 ? s.Repeat : 1;
+        });
+
         services.AddLogging(a => a.AddConsole());
         services.AddLazyCache();
 

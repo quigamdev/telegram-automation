@@ -14,7 +14,7 @@ public class ScheduleExecutor : IScheduleExecutor
         this.dateTimeProvider = dateTimeProvider;
     }
 
-    public async Task AddToScheduleAsync(AccountScheduleRequest data, int concurrency)
+    public async Task AddToScheduleAsync(AccountScheduleRequest data, ScheduleOptions scheduleOptions)
     {
         var accounts = store.GetAccountsForScheduling();
         accounts.Add(data.AccountNumber);
@@ -22,10 +22,10 @@ public class ScheduleExecutor : IScheduleExecutor
 
         store.SaveAccountsForScheduling(accounts);
 
-        await CreateSchedule("All", concurrency);
+        await CreateSchedule("All", scheduleOptions);
     }
 
-    public async Task CreateSchedule(string name, int concurrency)
+    public async Task CreateSchedule(string name, ScheduleOptions scheduleOptions)
     {
         var accountsForScheduling = store.GetAccountsForScheduling();
         var scheduleItems = await manager.GetBotAccountsAsync();
@@ -33,9 +33,13 @@ public class ScheduleExecutor : IScheduleExecutor
         scheduleItems = scheduleItems
              .Where(s => accountsForScheduling.Contains(s.AccountNumber)).ToList();
 
-        scheduleItems = scheduleItems.Concat(scheduleItems).Concat(scheduleItems).ToList(); // schedule the accounts twice
+        var finalScheduleItems = new List<BotAccount>();
+        for (var i = 0; i < scheduleOptions.Repeat; i++)
+        {
+            finalScheduleItems.AddRange(scheduleItems);
+        }
 
-        List<ScheduleItem> scheduled = CreateSchedulePlan(scheduleItems, concurrency);
+        List<ScheduleItem> scheduled = CreateSchedulePlan(finalScheduleItems, scheduleOptions.Concurrency);
 
         var schedule = new Schedule()
         {
@@ -79,7 +83,7 @@ public class ScheduleExecutor : IScheduleExecutor
                 .Where(s => !lastSlotAccounts.Contains(s.AccountNumber))
                 .TakeLast(remainingSlotsInLastGroup)
                 .Select(s => createScheduleItem(s, scheduleItems.Count));
-            
+
             scheduled.AddRange(fillement);
         }
 
@@ -194,12 +198,12 @@ public class ScheduleExecutor : IScheduleExecutor
         return Task.FromResult(schedule.ToList());
     }
 
-    public async Task RemoveFromSchedule(AccountScheduleRequest data, int concurrency)
+    public async Task RemoveFromSchedule(AccountScheduleRequest data, ScheduleOptions options)
     {
         var accounts = store.GetAccountsForScheduling();
         accounts = accounts.Where(s => data.AccountNumber != s).ToList();
 
         store.SaveAccountsForScheduling(accounts);
-        await CreateSchedule("All", concurrency);
+        await CreateSchedule("All", options);
     }
 }

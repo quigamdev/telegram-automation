@@ -9,4 +9,3 @@ public class TelegramConnectorOptions
     public long AutomationChatId { get; set; }
     public string AutomationChatName { get; set; }
 }
-
