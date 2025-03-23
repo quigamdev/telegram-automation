@@ -1,13 +1,13 @@
 {
   "devDependencies": {
-    "eslint": "^8.53.0",
-    "typescript": "^5.2.2"
+    "eslint": "9.23.0",
+    "typescript": "5.8.2"
   },
   "dependencies": {
-    "@types/google.visualization": "^0.0.72"
+    "@types/google.visualization": "0.0.74"
   },
   "scripts": {
-    "build": "tsc --outDir wwwroot/scripts",
-    "watch": "tsc -w --outDir wwwroot/scripts"
+    "build": "tsc --outDir wwwroot/scripts -p .\tsconfig.json",
+    "watch": "tsc -w --outDir wwwroot/scripts -p .\tsconfig.json"
   }
 }

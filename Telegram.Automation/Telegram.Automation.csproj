@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net9.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
@@ -8,6 +8,12 @@
 	  <None Remove="Mocks\StatusCommandResponse.txt" />
 	</ItemGroup>
 	<ItemGroup>
+	  <Content Include="Mocks\StatusCommandResponsePart2.txt">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Mocks\StatusCommandResponsePart1.txt">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
 	  <Content Include="Mocks\StatusCommandResponse.txt">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </Content>
