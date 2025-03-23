@@ -25,11 +25,14 @@ public class TelegramConnector(IOptions<TelegramConnectorOptions> settings, ILog
     public async Task<AuthenticationResult> Start()
     {
 
-        if (client != null) return await Authenticate(CancellationToken.None);
+        using var ct1 = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        if (client != null) return await Authenticate(ct1.Token);
+
         await locker.WaitAsync();
         try
         {
-            if (client != null) return await Authenticate(CancellationToken.None);
+            using var ct2 = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            if (client != null) return await Authenticate(ct2.Token);
 
             client = new TdClient();
 
@@ -46,8 +49,13 @@ public class TelegramConnector(IOptions<TelegramConnectorOptions> settings, ILog
                 systemLanguageCode: "en-US",
                 deviceModel: "Desktop",
                 applicationVersion: "0.1.0.0");
+            using var ct3 = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            return await Authenticate(ct3.Token);
 
-            return await Authenticate(CancellationToken.None);
+        }
+        catch (Exception e)
+        {
+            throw;
         }
         finally
         {
@@ -58,6 +66,8 @@ public class TelegramConnector(IOptions<TelegramConnectorOptions> settings, ILog
 
     private async Task SetLoggingLevel()
     {
+        client.Bindings.SetLogVerbosityLevel(0);
+
         await TdApi.SetLogTagVerbosityLevelAsync(client, "actor", 0);
         await TdApi.SetLogTagVerbosityLevelAsync(client, "binlog", 0);
         await TdApi.SetLogTagVerbosityLevelAsync(client, "connections", 0);
@@ -73,7 +83,7 @@ public class TelegramConnector(IOptions<TelegramConnectorOptions> settings, ILog
         return chat;
     }
 
-    private async Task<Chat> GetChatByTitle(string title)
+    private async Task<Chat?> GetChatByTitle(string title)
     {
         var chats = await client.GetChatsAsync(limit: 200);
 
@@ -134,9 +144,14 @@ public class TelegramConnector(IOptions<TelegramConnectorOptions> settings, ILog
         if (e is UpdateChatLastMessage lastMessageUpdate) Handle_UpdateChatLastMessage(lastMessageUpdate);
     }
 
-    public async Task<string> SendMessage(string message, Func<string, bool> messagePredicate, CancellationToken? token = null)
+    public async Task<string> SendMessage(
+        string message,
+        Func<string, bool> messagePredicate,
+        bool multipleMessagesExpected,
+        CancellationToken? token = null)
     {
         token ??= CancellationToken.None;
+        logger.LogDebug("Sending message: {0}", message);
 
         var chat = await GetChatByTitle(settings.AutomationChatName);
 
@@ -149,36 +164,73 @@ public class TelegramConnector(IOptions<TelegramConnectorOptions> settings, ILog
 
         var tsc = CancellationTokenSource.CreateLinkedTokenSource(token ?? CancellationToken.None, new CancellationTokenSource(TimeSpan.FromSeconds(30)).Token);
 
-        return await GetResponse(senderId, sentMessage.ChatId, messagePredicate, tsc.Token);
+        return await GetResponse(senderId, sentMessage.ChatId, messagePredicate, multipleMessagesExpected, tsc.Token);
     }
 
-    private async Task<string> GetResponse(long senderId, long chatId, Func<string, bool> messagePredicate, CancellationToken token)
+    private async Task<string> GetResponse(
+        long senderId,
+        long chatId,
+        Func<string, bool> messagePredicate,
+        bool multipleMessagesExpected,
+        CancellationToken token)
     {
         try
         {
             while (!token.IsCancellationRequested)
             {
+                if (multipleMessagesExpected)
+                    await Task.Delay(1_000, token);
+                var responses = new List<string>();
+
                 while (Messages.TryDequeue(out var update) && !token.IsCancellationRequested)
                 {
-                    if (update is null) continue;
-                    if (update.ChatId != chatId) continue;
-                    if ((update.LastMessage.SenderId as MessageSenderUser)?.UserId == senderId) continue;
+                    if (!IsMessageValid(senderId, chatId, update)) continue;
+                    logger.LogInformation("Processing message (to be processed {messages})", Messages.Count);
 
                     if (update?.LastMessage?.Content is TdApi.MessageContent.MessageText message && message?.Text?.Text is string)
                     {
-                        if (messagePredicate(message.Text.Text))
+                        if (multipleMessagesExpected)
+                        {
+                            if (messagePredicate(message.Text.Text))
+                            {
+                                responses.Add(message.Text.Text);
+
+                                if (Messages.Count == 0) // prevent premature exit from multi-message processing if the message was not received yet
+                                {
+                                    logger.LogInformation("Multi added, wait extra no more messages");
+                                }
+                            }
+                            else if (responses.Count > 0)
+                                return string.Concat(responses);
+                        }
+                        else if (messagePredicate(message.Text.Text))
                             return message.Text.Text;
                     }
                 }
+                if (multipleMessagesExpected)
+                    await Task.Delay(1_000, token);
                 await Task.Delay(128, token);
+                if (responses.Count > 0)
+                {
+                    logger.LogInformation("No more messages, returned {0} responses", responses.Count);
+                    return string.Concat(responses);
+                }
             }
-            return null;
+            return "";
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-
-            return null;
+            logger.LogWarning(ex, "Parsing response failed.");
+            return "";
         }
+    }
+
+    private bool IsMessageValid(long senderId, long chatId, UpdateChatLastMessage? update)
+    {
+        if (update is null) return false;
+        if (update.ChatId != chatId) return false;
+        if ((update.LastMessage.SenderId as MessageSenderUser)?.UserId == senderId) return false;
+        return true;
     }
 
     public IEnumerable<MessageLog> GetLog() => messagesLog;

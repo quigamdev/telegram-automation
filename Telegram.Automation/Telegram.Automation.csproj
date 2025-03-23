@@ -5,6 +5,11 @@
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 	<ItemGroup>
+	  <Compile Remove="Contracts\**" />
+	  <EmbeddedResource Remove="Contracts\**" />
+	  <None Remove="Contracts\**" />
+	</ItemGroup>
+	<ItemGroup>
 	  <None Remove="Mocks\StatusCommandResponse.txt" />
 	</ItemGroup>
 	<ItemGroup>
@@ -20,14 +25,11 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="LazyCache.AspNetCore" Version="2.4.0" />
-		<PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
-		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
-		<PackageReference Include="TDLib" Version="1.8.29" />
-		<PackageReference Include="tdlib.native" Version="1.8.29" />
-	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Contracts\" />
+		<PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.3" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.3" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.3" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="9.0.3" />
+		<PackageReference Include="TDLib" Version="1.8.45" />
+		<PackageReference Include="tdlib.native" Version="1.8.45" />
 	</ItemGroup>
 </Project>

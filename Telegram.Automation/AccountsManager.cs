@@ -38,7 +38,7 @@ public class AccountsManager
         var command = CommandBuilder.GetAccountsStatus();
 
         await InitConnector();
-        var message = await connector.SendMessage(command, MessageProcessor.IsStatusMessage);
+        var message = await connector.SendMessage(command, MessageProcessor.IsStatusMessage, true);
 
         return MessageProcessor.ProcessStatusMessage(message)
             .OrderBy(s => s.Name).ToList();
@@ -58,7 +58,7 @@ public class AccountsManager
         await InitConnector();
         var command = CommandBuilder.StartAccount(account);
 
-        var response = await connector.SendMessage(command, MessageProcessor.IsStartingAccountMessage);
+        var response = await connector.SendMessage(command, MessageProcessor.IsStartingAccountMessage, false);
         cache.Remove(CachKey);
         return response;
     }
@@ -67,7 +67,7 @@ public class AccountsManager
         await InitConnector();
         var command = CommandBuilder.StopAccount(account);
 
-        var response = await connector.SendMessage(command, MessageProcessor.IsStopingAccountMessage);
+        var response = await connector.SendMessage(command, MessageProcessor.IsStopingAccountMessage, false);
         cache.Remove(CachKey);
         return response;
     }

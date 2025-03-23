@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Telegram.Automation;
@@ -8,9 +7,10 @@ internal class Program
 {
     private static async Task Main(string[] args)
     {
-
         var builder = WebApplication.CreateBuilder(args);
         builder.Configuration.AddEnvironmentVariables();
+        builder.Configuration.AddJsonFile("appsettings.user.json", true, true);
+        
         var mode = builder.Configuration["mode"];
 
         Console.WriteLine($"Mode: {mode}");

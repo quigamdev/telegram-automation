@@ -4,7 +4,9 @@ public class MessageProcessor
     public static bool IsStatusMessage(string input) => input.Contains("Active:") &&
             input.Contains("/ Online:") &&
             input.Contains("-- Online --") &&
-            input.Contains("-- Offline --");
+            input.Contains("-- Offline --") 
+        || !input.Contains("\n") && input.Contains("]") 
+        || input.Contains("\n") && input.Contains("[") && input.Contains("]");
 
     public static List<BotAccount> ProcessStatusMessage(string input)
     {
