@@ -158,6 +158,9 @@ public class TelegramConnector(IOptions<TelegramConnectorOptions> settings, ILog
         //var chat = await GetChatByTitle(settings.AutomationChatName);
         //settings.AutomationChatId = chat.Id;
 
+        logger.LogDebug("Sending message: {0}", message);
+        Messages.Clear();
+
         var sentMessage = await client.SendMessageAsync(chat.Id, inputMessageContent: new InputMessageText() { Text = new FormattedText() { Text = message } });
 
         var senderId = ((MessageSenderUser)sentMessage.SenderId).UserId;
@@ -176,53 +179,65 @@ public class TelegramConnector(IOptions<TelegramConnectorOptions> settings, ILog
     {
         try
         {
-            while (!token.IsCancellationRequested)
-            {
-                if (multipleMessagesExpected)
-                    await Task.Delay(1_000, token);
-                var responses = new List<string>();
-
-                while (Messages.TryDequeue(out var update) && !token.IsCancellationRequested)
-                {
-                    if (!IsMessageValid(senderId, chatId, update)) continue;
-                    logger.LogInformation("Processing message (to be processed {messages})", Messages.Count);
-
-                    if (update?.LastMessage?.Content is TdApi.MessageContent.MessageText message && message?.Text?.Text is string)
-                    {
-                        if (multipleMessagesExpected)
-                        {
-                            if (messagePredicate(message.Text.Text))
-                            {
-                                responses.Add(message.Text.Text);
-
-                                if (Messages.Count == 0) // prevent premature exit from multi-message processing if the message was not received yet
-                                {
-                                    logger.LogInformation("Multi added, wait extra no more messages");
-                                }
-                            }
-                            else if (responses.Count > 0)
-                                return string.Concat(responses);
-                        }
-                        else if (messagePredicate(message.Text.Text))
-                            return message.Text.Text;
-                    }
-                }
-                if (multipleMessagesExpected)
-                    await Task.Delay(1_000, token);
-                await Task.Delay(128, token);
-                if (responses.Count > 0)
-                {
-                    logger.LogInformation("No more messages, returned {0} responses", responses.Count);
-                    return string.Concat(responses);
-                }
-            }
-            return "";
+            if (multipleMessagesExpected)
+                return await GetMultiMessageResponse(senderId, chatId, messagePredicate, token);
+            return await GetSingleMessageResponse(senderId, chatId, messagePredicate, token);
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Parsing response failed.");
             return "";
         }
+    }
+
+    private async Task<string> GetSingleMessageResponse(long senderId, long chatId, Func<string, bool> messagePredicate, CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            while (Messages.TryDequeue(out var update) && !token.IsCancellationRequested)
+            {
+                if (!IsMessageValid(senderId, chatId, update)) continue;
+
+                if (update?.LastMessage?.Content is TdApi.MessageContent.MessageText message &&
+                    message?.Text?.Text is string text &&
+                    messagePredicate(text))
+                    return text;
+            }
+            await Task.Delay(128, token);
+        }
+        return "";
+    }
+
+    private async Task<string> GetMultiMessageResponse(long senderId, long chatId, Func<string, bool> messagePredicate, CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            await Task.Delay(1_000, token); // wait to receive multiple message 
+            var responses = new List<string>();
+
+            while (Messages.TryDequeue(out var update) && !token.IsCancellationRequested)
+            {
+                if (!IsMessageValid(senderId, chatId, update)) continue;
+                logger.LogInformation("Processing message (to be processed {messages})", Messages.Count);
+
+                if (update?.LastMessage?.Content is TdApi.MessageContent.MessageText message && message?.Text?.Text is string)
+                {
+                    if (messagePredicate(message.Text.Text))
+                    {
+                        responses.Add(message.Text.Text);
+                    }
+                    else if (responses.Count > 0)
+                        return string.Concat(responses);
+                }
+            }
+            
+            if (responses.Count > 0)
+            {
+                logger.LogInformation("No more messages, returned {0} responses", responses.Count);
+                return string.Concat(responses);
+            }
+        }
+        return "";
     }
 
     private bool IsMessageValid(long senderId, long chatId, UpdateChatLastMessage? update)

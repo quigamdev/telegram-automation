@@ -13,12 +13,6 @@
 	  <None Remove="Mocks\StatusCommandResponse.txt" />
 	</ItemGroup>
 	<ItemGroup>
-	  <Content Include="Mocks\StatusCommandResponsePart2.txt">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </Content>
-	  <Content Include="Mocks\StatusCommandResponsePart1.txt">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </Content>
 	  <Content Include="Mocks\StatusCommandResponse.txt">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </Content>
